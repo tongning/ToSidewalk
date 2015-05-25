@@ -1,7 +1,7 @@
 class Way(object):
     def __init__(self, wid=None, nids=(), type=None):
         if wid is None:
-            self.id = id(self)
+            self.id = str(id(self))
         else:
             self.id = wid
         self.nids = nids

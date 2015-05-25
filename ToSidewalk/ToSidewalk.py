@@ -143,6 +143,9 @@ def make_crosswalks(street_nodes, sidewalk_nodes, streets, sidewalks):
         adj_street_nodes = []
         for street_id in street_ids:
             street = streets.get(street_id)
+
+            # If the current intersection node is at the head of street.nids, then take the second node and push it
+            # into adj_street_nodes. Otherwise, take the node that is second to the last in street.nids .
             if street.nids[0] == intersection_node.id:
                 adj_street_nodes.append(street_nodes.get(street.nids[1]))
             else:
@@ -164,7 +167,8 @@ def make_crosswalks(street_nodes, sidewalk_nodes, streets, sidewalks):
             angles = [math.acos(np.dot(vectors[i - 1], vectors[i])) for i in range(3)]
 
             idx = np.argmax(angles)
-            dummy_vector = - vectors[idx + 1] * 0.000001
+            vec_idx = (idx + 1) % 3
+            dummy_vector = - vectors[vec_idx] * 0.000001
             dummy_coordinate_vector = v_curr + dummy_vector
             dummy_latlng = LatLng(math.degrees(dummy_coordinate_vector[0]), math.degrees(dummy_coordinate_vector[1]))
             dummy_node = Node(None, dummy_latlng)
@@ -176,12 +180,13 @@ def make_crosswalks(street_nodes, sidewalk_nodes, streets, sidewalks):
                 n2 = adj_street_nodes[i]
                 new_node = make_crosswalk_node(intersection_node, n1, n2)
 
+                # Keep track of from which streets the crosswalk nodes are created.
                 way_ids = []
                 for wid in n1.get_way_ids():
                     way_ids.append(wid)
                 for wid in n2.get_way_ids():
                     way_ids.append(wid)
-                way_ids = list(set(way_ids))
+                way_ids = list(set(intersection_node.get_way_ids()) & set(way_ids))  #list(set(way_ids))
 
                 new_node.way_ids = way_ids
                 sidewalk_nodes.add(new_node.id, new_node)
@@ -310,8 +315,10 @@ if __name__ == "__main__":
     #filename = "../resources/Simple4WayIntersection_02.osm"
     # filename = "../resources/TShapeIntersection_01.osm"
     # filename = "../resources/TShapeIntersection_02.osm"
-    filename = "../resources/SegmentedStreet_01.osm"
+    #filename = "../resources/SegmentedStreet_01.osm"
     #filename = "../resources/ComplexIntersection_01.osm"
+    #filename = "../resources/SmallMap_01.osm"
+    filename = "../resources/SmallMap_02.osm"
     nodes, ways = parse(filename)
     osm_obj = OSM(nodes, ways)
     osm_obj.parse_intersections()

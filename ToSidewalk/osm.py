@@ -122,8 +122,7 @@ class OSM(object):
 
         return osm
 
-    # 49794299
-    def merge_nodes(self, distance_threshold=0.008):
+    def merge_nodes(self, distance_threshold=0.015):
         """
         Merge nodes that are close to intersection nodes. Then merge nodes that are
         close to each other.

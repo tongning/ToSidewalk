@@ -8,7 +8,7 @@ class Node(object):
         self.latlng = latlng  # Note: Would it be cleaner to inherit LatLng?
 
         if nid is None:
-            self.id = id(self)
+            self.id = str(id(self))
         else:
             self.id = nid
 
