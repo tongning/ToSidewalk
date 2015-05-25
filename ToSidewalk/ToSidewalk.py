@@ -1,17 +1,12 @@
+import logging as log
+import math
+import numpy as np
+
 from latlng import LatLng
 from nodes import Node, Nodes
 from ways import Sidewalk, Sidewalks
 from utilities import window
 from osm import OSM, parse
-
-import logging as log
-import math
-import numpy as np
-
-try:
-    from xml.etree import cElementTree as ET
-except ImportError, e:
-    from xml.etree import ElementTree as ET
 
 log.basicConfig(format="", level=log.DEBUG)
 
@@ -60,7 +55,7 @@ def make_sidewalk_nodes(way_id, prev_node, curr_node, next_node):
         return p_sidewalk_2, p_sidewalk_1
 
 
-def make_sidewalks(nodes, streets):
+def make_sidewalks(street_nodes, streets):
     # Go through each street and create sidewalks on both sides of the road.
     sidewalks = Sidewalks()
     sidewalk_nodes = Nodes()
@@ -71,9 +66,9 @@ def make_sidewalks(nodes, streets):
 
         # Create sidewalk nodes
         for prev_nid, curr_nid, next_nid in window(street.nids, 3, padding=1):
-            curr_node = nodes.get(curr_nid)
-            prev_node = nodes.get(prev_nid)
-            next_node = nodes.get(next_nid)
+            curr_node = street_nodes.get(curr_nid)
+            prev_node = street_nodes.get(prev_nid)
+            next_node = street_nodes.get(next_nid)
 
             n1, n2 = make_sidewalk_nodes(street.id, prev_node, curr_node, next_node)
             # log.debug(n1)
@@ -109,9 +104,9 @@ def make_sidewalks(nodes, streets):
     return sidewalk_nodes, sidewalks
 
 
-def make_intersection_nodes(street_nodes, sidewalk_nodes, streets, sidewalks):
+def make_crosswalks(street_nodes, sidewalk_nodes, streets, sidewalks):
     # Some helper functions
-    def make_intersection_node(node, n1, n2, angle=None):
+    def make_crosswalk_node(node, n1, n2, angle=None):
         const = 0.000001414
         if n2 is None and angle is not None:
             v1 = node.vector_to(n1, normalize=True)
@@ -164,7 +159,7 @@ def make_intersection_nodes(street_nodes, sidewalk_nodes, streets, sidewalks):
             # Take care of the case where len(adj_nodes) == 3.
             # Identify the largest angle that are formed by three segments
             # Make a dummy node between two vectors that form the largest angle
-            # Using the four nodes (original 3 and a dummy node), create intersection nodes
+            # Using the four nodes (3 original nodes and a dummy node), create crosswalk nodes
             vectors = [intersection_node.vector_to(adj_street_node, normalize=True) for adj_street_node in adj_street_nodes]
             angles = [math.acos(np.dot(vectors[i - 1], vectors[i])) for i in range(3)]
 
@@ -175,11 +170,11 @@ def make_intersection_nodes(street_nodes, sidewalk_nodes, streets, sidewalks):
             dummy_node = Node(None, dummy_latlng)
             adj_street_nodes.insert(idx, dummy_node)
 
-            # Create intersection nodes
+            # Create crosswalk nodes
             for i in range(len(adj_street_nodes)):
                 n1 = adj_street_nodes[i - 1]
                 n2 = adj_street_nodes[i]
-                new_node = make_intersection_node(intersection_node, n1, n2)
+                new_node = make_crosswalk_node(intersection_node, n1, n2)
 
                 way_ids = []
                 for wid in n1.get_way_ids():
@@ -250,7 +245,7 @@ def make_intersection_nodes(street_nodes, sidewalk_nodes, streets, sidewalks):
             for i in range(len(adj_street_nodes)):
                 n1 = adj_street_nodes[i - 1]
                 n2 = adj_street_nodes[i]
-                new_node = make_intersection_node(intersection_node, n1, n2)
+                new_node = make_crosswalk_node(intersection_node, n1, n2)
                 sidewalk_nodes.add(new_node.id, new_node)
                 new_intersection_sidewalk_node_ids.append(new_node.id)
                 source_table[new_node.id] = [intersection_node, n1, n2]
@@ -304,7 +299,7 @@ def make_intersection_nodes(street_nodes, sidewalk_nodes, streets, sidewalks):
 def main(street_nodes, streets):
     sidewalk_nodes, sidewalks = make_sidewalks(street_nodes, streets)
     osm = OSM(sidewalk_nodes, sidewalks)
-    sidewalk_nodes, sidewalks = make_intersection_nodes(street_nodes, osm.nodes, streets, osm.ways)
+    make_crosswalks(street_nodes, osm.nodes, streets, osm.ways)
 
     output = osm.export()
     print output
@@ -320,6 +315,5 @@ if __name__ == "__main__":
     nodes, ways = parse(filename)
     osm_obj = OSM(nodes, ways)
     osm_obj.parse_intersections()
-
 
     main(osm_obj.nodes, osm_obj.ways)

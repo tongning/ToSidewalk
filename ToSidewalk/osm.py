@@ -6,6 +6,8 @@ from ways import Way, Ways, Street, Streets
 from utilities import window
 
 class OSM(object):
+    # Todo: The class has grown big that it does more than reading and exporting OSM... I should change the name.
+
     def __init__(self, nodes, ways):
         self.nodes = nodes
         self.ways = ways
@@ -13,8 +15,7 @@ class OSM(object):
 
         # Preprocess and clean up the data
         self.split_streets()
-        # Todo: go through nodes and find ones that have two ways (nodes should have either one or more than two ways)
-        #  self.merge_ways()
+        self.clean_street_segmentation()
         self.merge_nodes()
         self.clean_up_nodes()
 
@@ -50,6 +51,13 @@ class OSM(object):
             new_nodes.add(nid, self.nodes.get(nid))
 
         self.nodes = new_nodes
+        return
+
+    def clean_street_segmentation(self):
+        """
+        Go through nodes and find ones that have two ways (nodes should have either one or more than two ways)
+        """
+
         return
 
     def export(self, format="osm"):
@@ -220,7 +228,9 @@ def parse_intersections(nodes, ways):
     return
 
 if __name__ == "__main__":
-    filename = "../resources/Simple4WayIntersection_01.osm"
+    filename = "../resources/SegmentedStreet_01.osm"
     nodes, ways = parse(filename)
-    obj = OSM(nodes, ways)
-    print obj.export()
+    osm_obj = OSM(nodes, ways)
+    osm_obj.parse_intersections()
+
+    print osm_obj.export()
