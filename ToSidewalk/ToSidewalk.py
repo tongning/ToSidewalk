@@ -1,6 +1,6 @@
 from latlng import LatLng
 from nodes import Node, Nodes
-from ways import Way, Ways, Sidewalk, Sidewalks
+from ways import Sidewalk, Sidewalks
 from utilities import window
 from osm import OSM, parse
 
