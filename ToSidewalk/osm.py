@@ -2,10 +2,11 @@ from xml.etree import cElementTree as ET
 
 from latlng import LatLng
 from nodes import Node, Nodes
-from ways import Way, Ways, Street, Streets
-from utilities import window
+from ways import Street, Streets
 
 class OSM(object):
+    # Todo: The class has grown big that it does more than reading and exporting OSM... I should change the name.
+
     def __init__(self, nodes, ways):
         self.nodes = nodes
         self.ways = ways
@@ -13,10 +14,9 @@ class OSM(object):
 
         # Preprocess and clean up the data
         self.split_streets()
-        # Todo: go through nodes and find ones that have two ways (nodes should have either one or more than two ways)
-        #  self.merge_ways()
         self.merge_nodes()
         self.clean_up_nodes()
+        self.clean_street_segmentation()
 
         for node in self.nodes.get_list():
             lat, lng = node.latlng.location(radian=False)
@@ -50,6 +50,36 @@ class OSM(object):
             new_nodes.add(nid, self.nodes.get(nid))
 
         self.nodes = new_nodes
+        return
+
+    def clean_street_segmentation(self):
+        """
+        Go through nodes and find ones that have two connected ways (nodes should have either one or more than two ways)
+        """
+        for node in self.nodes.get_list():
+            if len(node.get_way_ids()) == 2:
+                way_id_1, way_id_2 = node.get_way_ids()
+                way_1 = self.ways.get(way_id_1)
+                way_2 = self.ways.get(way_id_2)
+
+                # Given that the streets are split, node's index in each way's nids (a list of node ids) should
+                # either be 0 or else.
+                combined_nids = []
+                if way_1.nids.index(node.id) == 0 and way_2.nids.index(node.id) == 0:
+                    combined_nids = way_1.nids[:0:-1] + way_2.nids
+                if way_1.nids.index(node.id) != 0 and way_2.nids.index(node.id) == 0:
+                    combined_nids = way_1.nids[:-1] + way_2.nids
+                if way_1.nids.index(node.id) == 0 and way_2.nids.index(node.id) != 0:
+                    combined_nids = way_2.nids[:-1] + way_1.nids
+                else:
+                    combined_nids = way_1.nids + way_2.nids[1::-1]
+
+                # Create a new way from way_1 and way_2. Then remove the two ways from self.way
+                new_street = Street(None, combined_nids, "footway")
+                self.ways.add(new_street.id, new_street)
+                self.ways.remove(way_id_1)
+                self.ways.remove(way_id_2)
+
         return
 
     def export(self, format="osm"):
@@ -92,17 +122,21 @@ class OSM(object):
 
         return osm
 
+    # 49794299
     def merge_nodes(self, distance_threshold=0.008):
         """
-        Merge nodes that are close to intersection nodes.
+        Merge nodes that are close to intersection nodes. Then merge nodes that are
+        close to each other.
         """
         for street in self.ways.get_list():
-            if len(street.nids) < 2:
+            # if len(street.nids) < 2:
+            if len(street.nids) <= 2:
+                # Skip. You should not merge two intersection nodes
                 continue
 
-            # print street.nids
             start = self.nodes.get(street.nids[0])
             end = self.nodes.get(street.nids[-1])
+
             # Merge the nodes around the beginning of the street
             for nid in street.nids[1:-1]:
                 target = self.nodes.get(nid)
@@ -112,7 +146,8 @@ class OSM(object):
                 else:
                     break
 
-            if len(street.nids) < 2:
+            if len(street.nids) <= 2:
+                # Done, if you merged everything other than intersection nodes
                 continue
 
             for nid in street.nids[-2:0:-1]:
@@ -123,7 +158,6 @@ class OSM(object):
                 else:
                     break
 
-            # print street.nids
         return
 
     def parse_intersections(self):
@@ -141,9 +175,14 @@ class OSM(object):
             if len(intersection_indices) == 0:
                 new_streets.add(way.id, way)
             else:
-                if len(intersection_indices) == 1 and (intersection_indices[0] == 0 or intersection_indices[0] == len(way.nids)):
+                # Do not split streets if (i) there is only one intersection node and it is the on the either end of the
+                # street, or (ii) there are only two nodes and both of them are on the edge of the street.
+                # Otherwise split the street!
+                if len(intersection_indices) == 1 and (intersection_indices[0] == 0 or intersection_indices[0] == len(way.nids) - 1):
                     new_streets.add(way.id, way)
-                if len(intersection_indices) == 2 and (intersection_indices[0] == 0 and intersection_indices[1] == len(way.nids)):
+                elif len(intersection_indices) == 2 and (intersection_indices[0] == 0 and intersection_indices[1] == len(way.nids) - 1):
+                    new_streets.add(way.id, way)
+                elif len(intersection_indices) == 2 and (intersection_indices[1] == 0 and intersection_indices[0] == len(way.nids) - 1):
                     new_streets.add(way.id, way)
                 else:
                     prev_idx = 0
@@ -191,9 +230,7 @@ def parse(filename):
     valid_highways = set(['primary', 'secondary', 'tertiary', 'residential'])
     for way in ways_tree:
         highway_tag = way.find(".//tag[@k='highway']")
-        # print type(highway_tag)
         if highway_tag is not None and highway_tag.get("v") in valid_highways:
-            # print highway_tag.get("v"), way
             node_elements = filter(lambda elem: elem.tag == "nd", list(way))
             nids = [node.get("ref") for node in node_elements]
 
@@ -203,12 +240,11 @@ def parse(filename):
     # Find intersections and store adjacency information
     for street in streets.get_list():
         # prev_nid = None
-        for prev_nid, nid, next_nid in window(street.nids, 3, padding=1):
-            # print prev_nid, nid, next_nid
+        for nid in street.nids:
             street_nodes.get(nid).append_way(street.id)
 
-            if street_nodes.get(nid).is_intersection() and nid not in streets.intersection_node_ids:
-                streets.intersection_node_ids.append(nid)
+            # if street_nodes.get(nid).is_intersection() and nid not in streets.intersection_node_ids:
+            #     streets.intersection_node_ids.append(nid)
 
     return street_nodes, streets
 
@@ -220,7 +256,9 @@ def parse_intersections(nodes, ways):
     return
 
 if __name__ == "__main__":
-    filename = "../resources/Simple4WayIntersection_01.osm"
+    filename = "../resources/SegmentedStreet_01.osm"
     nodes, ways = parse(filename)
-    obj = OSM(nodes, ways)
-    print obj.export()
+    osm_obj = OSM(nodes, ways)
+    osm_obj.parse_intersections()
+
+    print osm_obj.export()
