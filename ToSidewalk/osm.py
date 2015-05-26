@@ -14,6 +14,7 @@ class OSM(object):
 
         # Preprocess and clean up the data
         self.split_streets()
+        self.merge_parallel_street_segments()
         self.merge_nodes()
         self.clean_up_nodes()
         self.clean_street_segmentation()
@@ -159,6 +160,10 @@ class OSM(object):
 
         return
 
+    def merge_parallel_street_segments(self):
+        merge_parallel_street_segments(self.nodes, self.ways)
+        return
+
     def parse_intersections(self):
         parse_intersections(self.nodes, self.ways)
         return
@@ -205,6 +210,11 @@ class OSM(object):
             for nid in street.nids:
                 self.nodes.get(nid).append_way(street.id)
         return
+
+
+def merge_parallel_street_segments(node, ways):
+
+    return
 
 
 def parse(filename):
