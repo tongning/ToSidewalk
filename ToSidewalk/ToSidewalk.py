@@ -1,3 +1,4 @@
+import geojsonio
 import logging as log
 import math
 import numpy as np
@@ -289,7 +290,7 @@ def make_crosswalks(street_nodes, sidewalk_nodes, streets, sidewalks):
                     # identify which one should be connected to crosswalk_node
                     v_n_adj = ni.vector_to(n_adj)  # A vector from an intersection node to an adjacent street node
                     shared_street_ids = set(intersection_node.way_ids) & set(n_adj.way_ids)
-                    shared_street_id = list(shared_street_ids)[0]
+                    shared_street_id = list(shared_street_ids)[0]  # Issue #7
 
                     # Get a pair of vectors to two sidewalk nodes created from n1
                     n_adj_s1, n_adj_s2 = n_adj.sidewalk_nodes[shared_street_id]
@@ -337,6 +338,7 @@ def main(street_nodes, streets):
     make_crosswalks(street_nodes, osm.nodes, streets, osm.ways)
 
     output = osm.export(format='geojson')
+    # geojsonio.display(output)
     print output
 
 
@@ -348,7 +350,7 @@ if __name__ == "__main__":
     #filename = "../resources/SegmentedStreet_01.osm"
     #filename = "../resources/ComplexIntersection_01.osm"
     #filename = "../resources/SmallMap_01.osm"
-    filename = "../resources/SmallMap_02.osm"
+    filename = "../resources/SmallMap_03.osm"
     # filename = "../resources/ParallelLanes_01.osm"
     nodes, ways = parse(filename)
     osm_obj = OSM(nodes, ways)

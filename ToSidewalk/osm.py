@@ -1,4 +1,5 @@
 from xml.etree import cElementTree as ET
+import geojsonio
 
 from latlng import LatLng
 from nodes import Node, Nodes
@@ -83,7 +84,7 @@ class OSM(object):
 
         return
 
-    def export(self, format="osm"):
+    def export(self, format="geojson"):
         """
         Export the node and way data.
         Todo: Implement geojson format for export.
@@ -301,4 +302,6 @@ if __name__ == "__main__":
     osm_obj = OSM(nodes, ways)
     osm_obj.parse_intersections()
 
-    print osm_obj.export(format='geojson')
+    geojson = osm_obj.export(format='geojson')
+
+    geojsonio.display(geojson)
