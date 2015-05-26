@@ -6,6 +6,7 @@ class Way(object):
             self.id = wid
         self.nids = nids
         self.type = type
+        self.user = 'test'
         return
 
     def get_node_ids(self):

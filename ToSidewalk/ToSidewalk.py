@@ -336,7 +336,7 @@ def main(street_nodes, streets):
     osm = OSM(sidewalk_nodes, sidewalks)
     make_crosswalks(street_nodes, osm.nodes, streets, osm.ways)
 
-    output = osm.export()
+    output = osm.export(format='geojson')
     print output
 
 
@@ -348,8 +348,8 @@ if __name__ == "__main__":
     #filename = "../resources/SegmentedStreet_01.osm"
     #filename = "../resources/ComplexIntersection_01.osm"
     #filename = "../resources/SmallMap_01.osm"
-    # filename = "../resources/SmallMap_02.osm"
-    filename = "../resources/ParallelLanes_01.osm"
+    filename = "../resources/SmallMap_02.osm"
+    # filename = "../resources/ParallelLanes_01.osm"
     nodes, ways = parse(filename)
     osm_obj = OSM(nodes, ways)
     osm_obj.parse_intersections()

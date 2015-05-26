@@ -88,40 +88,71 @@ class OSM(object):
         Export the node and way data.
         Todo: Implement geojson format for export.
         """
-        header = """
+        if format == 'osm':
+            header = """
 <?xml version="1.0" encoding="UTF-8"?>
 <osm version="0.6">
 <bounds minlat="%s" minlon="%s" maxlat="%s" maxlon="%s" />
 """ % (str(self.bounds[0]), str(self.bounds[1]), str(self.bounds[2]), str(self.bounds[3]))
 
-        footer = "</osm>"
-        node_list = []
-        for node in self.nodes.get_list():
-            lat, lng = node.latlng.location(radian=False)
-            node_str = """<node id="%s" visible="true" user="test" lat="%s" lon="%s" />""" % (str(node.id), str(lat), str(lng))
-            node_list.append(node_str)
+            footer = "</osm>"
+            node_list = []
+            for node in self.nodes.get_list():
+                lat, lng = node.latlng.location(radian=False)
+                node_str = """<node id="%s" visible="true" user="test" lat="%s" lon="%s" />""" % (str(node.id), str(lat), str(lng))
+                node_list.append(node_str)
 
-        way_list = []
-        for way in self.ways.get_list():
-            way_str = """<way id="%s" visible="true" user="test">""" % (str(way.id))
-            way_list.append(way_str)
-            for nid in way.get_node_ids():
-                nid_str = """<nd ref="%s" />""" % (str(nid))
-                way_list.append(nid_str)
+            way_list = []
+            for way in self.ways.get_list():
+                way_str = """<way id="%s" visible="true" user="test">""" % (str(way.id))
+                way_list.append(way_str)
+                for nid in way.get_node_ids():
+                    nid_str = """<nd ref="%s" />""" % (str(nid))
+                    way_list.append(nid_str)
 
-            if way.type is not None:
-                tag = """<tag k="%s" v="%s" />""" % ("highway", way.type)
-                if way.type == "footway":
-                    # How to tag sidewalks in OpenStreetMap
-                    # https://help.openstreetmap.org/questions/1236/should-i-map-sidewalks
-                    # http://wiki.openstreetmap.org/wiki/Tag:footway%3Dsidewalk
-                    tag = """<tag k="%s" v="%s" />""" % ("footway", "sidewalk")
-                way_list.append(tag)
-            way_list.append("</way>")
+                if way.type is not None:
+                    tag = """<tag k="%s" v="%s" />""" % ("highway", way.type)
+                    if way.type == "footway":
+                        # How to tag sidewalks in OpenStreetMap
+                        # https://help.openstreetmap.org/questions/1236/should-i-map-sidewalks
+                        # http://wiki.openstreetmap.org/wiki/Tag:footway%3Dsidewalk
+                        tag = """<tag k="%s" v="%s" />""" % ("footway", "sidewalk")
+                    way_list.append(tag)
+                way_list.append("</way>")
 
-        osm = header + "\n".join(node_list) + "\n" + "\n".join(way_list) + "\n" + footer
+            osm = header + "\n".join(node_list) + "\n" + "\n".join(way_list) + "\n" + footer
 
-        return osm
+            return osm
+        else:
+            # Mapbox GeoJson format
+            # https://github.com/mapbox/simplestyle-spec/tree/master/1.1.0
+            geojson = {}
+            geojson['type'] = "FeatureCollection"
+            geojson['features'] = []
+            for way in self.ways.get_list():
+                feature = {}
+                feature['properties'] = {
+                    'type': way.type,
+                    'id': way.id,
+                    'user': way.user,
+                    'stroke': '#555555'
+                }
+                feature['type'] = 'Feature'
+                feature['id'] = 'way/%s' % (way.id)
+
+
+                coordinates = []
+                for nid in way.nids:
+                    latlng = self.nodes.get(nid).latlng
+                    coordinates.append([latlng.lng, latlng.lat])
+                feature['geometry'] = {
+                    'type': 'LineString',
+                    'coordinates': coordinates
+                }
+                geojson['features'].append(feature)
+
+            import json
+            return json.dumps(geojson)
 
     def merge_nodes(self, distance_threshold=0.015):
         """
@@ -270,4 +301,4 @@ if __name__ == "__main__":
     osm_obj = OSM(nodes, ways)
     osm_obj.parse_intersections()
 
-    print osm_obj.export()
+    print osm_obj.export(format='geojson')
