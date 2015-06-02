@@ -3,7 +3,7 @@ class Way(object):
         if wid is None:
             self.id = str(id(self))
         else:
-            self.id = wid
+            self.id = str(wid)
         self.nids = nids
         self.type = type
         self.user = 'test'

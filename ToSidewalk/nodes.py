@@ -10,7 +10,7 @@ class Node(object):
         if nid is None:
             self.id = str(id(self))
         else:
-            self.id = nid
+            self.id = str(nid)
 
         self.way_ids = []
         self.sidewalk_nodes = {}
