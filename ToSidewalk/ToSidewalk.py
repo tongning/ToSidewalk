@@ -15,12 +15,14 @@ def make_sidewalk_nodes(street, prev_node, curr_node, next_node):
     if prev_node is None:
         v = - curr_node.vector_to(next_node, normalize=False)
         vec_prev = curr_node.vector() + v
-        latlng = LatLng(math.degrees(vec_prev[0]), math.degrees(vec_prev[1]))
+        latlng = LatLng(vec_prev[0], vec_prev[1])
+        # latlng = LatLng(math.degrees(vec_prev[0]), math.degrees(vec_prev[1]))
         prev_node = Node(None, latlng)
     elif next_node is None:
         v = - curr_node.vector_to(prev_node, normalize=False)
         vec_next = curr_node.vector() + v
-        latlng = LatLng(math.degrees(vec_next[0]), math.degrees(vec_next[1]))
+        latlng = LatLng(vec_next[0], vec_next[1])
+        # latlng = LatLng(math.degrees(vec_next[0]), math.degrees(vec_next[1]))
         next_node = Node(None, latlng)
 
     curr_latlng = np.array(curr_node.latlng.location())
@@ -123,7 +125,8 @@ def sort_nodes(center_node, nodes):
     return sorted(nodes, cmp=cmp)
 
 def make_crosswalk_node(node, n1, n2, angle=None):
-    const = 0.000001414
+    # const = 0.000001414
+    const = 0.00008
     v_curr = node.vector()
 
     if n2 is None and angle is not None:
@@ -131,7 +134,7 @@ def make_crosswalk_node(node, n1, n2, angle=None):
         rot_mat = np.array([(math.cos(angle), -math.sin(angle)), (math.sin(angle), math.cos(angle))])
         v_norm = rot_mat.dot(v1)
         v_new = v_curr + v_norm * const
-        latlng_new = LatLng(math.degrees(v_new[0]), math.degrees(v_new[1]))
+        latlng_new = LatLng(v_new[0], v_new[1])
         return Node(None, latlng_new)
     else:
         v1 = node.vector_to(n1, normalize=True)
@@ -187,9 +190,9 @@ def make_crosswalks(street_nodes, sidewalk_nodes, streets, sidewalks):
 
             idx = np.argmax(angles)
             vec_idx = (idx + 1) % 3
-            dummy_vector = - vectors[vec_idx] * 0.000001
+            dummy_vector = - vectors[vec_idx] * 0.0001
             dummy_coordinate_vector = v_curr + dummy_vector
-            dummy_latlng = LatLng(math.degrees(dummy_coordinate_vector[0]), math.degrees(dummy_coordinate_vector[1]))
+            dummy_latlng = LatLng(dummy_coordinate_vector[0], dummy_coordinate_vector[1])
             dummy_node = Node(None, dummy_latlng)
             adj_street_nodes.insert(idx, dummy_node)
 
@@ -348,6 +351,7 @@ def make_crosswalks(street_nodes, sidewalk_nodes, streets, sidewalks):
                     # intersection_sidewalk_node_id_index = sidewalk.nids.index(intersection_sidewalk_node_id)
                     # sidewalk.nids[intersection_sidewalk_node_id_index] = crosswalk_node.id
                     # sidewalk_nodes.remove(intersection_sidewalk_node_id)
+
                     swap_nodes(sidewalk_nodes, sidewalk, intersection_sidewalk_node_id, crosswalk_node.id)
 
     return sidewalk_nodes, sidewalks
@@ -370,7 +374,7 @@ if __name__ == "__main__":
     #filename = "../resources/SegmentedStreet_01.osm"
     #filename = "../resources/ComplexIntersection_01.osm"
     #filename = "../resources/SmallMap_01.osm"
-    filename = "../resources/SmallMap_03.osm"
+    filename = "../resources/SmallMap_02.osm"
     # filename = "../resources/ParallelLanes_01.osm"
     nodes, ways = parse(filename)
     osm_obj = OSM(nodes, ways)
