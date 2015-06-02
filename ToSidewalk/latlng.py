@@ -7,6 +7,9 @@ class LatLng(object):
         self.node_id = node_id
         return
 
+    def __eq__(self, other):
+        return self.lat == other.lat and self.lng == other.lng
+
     def distance_to(self, latlng):
         return haversine(radians(self.lng), radians(self.lat), radians(latlng.lng), radians(latlng.lat))
 

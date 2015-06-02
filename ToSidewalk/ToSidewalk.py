@@ -105,35 +105,53 @@ def make_sidewalks(street_nodes, streets):
     return sidewalk_nodes, sidewalks
 
 
-def make_crosswalks(street_nodes, sidewalk_nodes, streets, sidewalks):
-    # Some helper functions
-    def make_crosswalk_node(node, n1, n2, angle=None):
-        const = 0.000001414
-        if n2 is None and angle is not None:
-            v1 = node.vector_to(n1, normalize=True)
-            rot_mat = np.array([(math.cos(angle), -math.sin(angle)), (math.sin(angle), math.cos(angle))])
-            v_norm = rot_mat.dot(v1)
-            v_new = v_curr + v_norm * const
-            latlng_new = LatLng(math.degrees(v_new[0]), math.degrees(v_new[1]))
-            return Node(None, latlng_new)
-        else:
-            v1 = node.vector_to(n1, normalize=True)
-            v2 = node.vector_to(n2, normalize=True)
-            v = v1 + v2
-            v_norm = v / np.linalg.norm(v)
-            v_new = v_curr + v_norm * const
-            latlng_new = LatLng(math.degrees(v_new[0]), math.degrees(v_new[1]))
-            return Node(None, latlng_new)
-
+def sort_nodes(center_node, nodes):
+    """
+    Sort nodes around the center_node in clockwise
+    """
     def cmp(n1, n2):
-        angle1 = intersection_node.angle_to(n1)
-        angle2 = intersection_node.angle_to(n2)
+        angle1 = (math.degrees(center_node.angle_to(n1)) + 360.) % 360
+        angle2 = (math.degrees(center_node.angle_to(n2)) + 360.) % 360
+
         if angle1 < angle2:
             return -1
         elif angle1 == angle2:
             return 0
         else:
             return 1
+
+    return sorted(nodes, cmp=cmp)
+
+def make_crosswalk_node(node, n1, n2, angle=None):
+    const = 0.000001414
+    v_curr = node.vector()
+
+    if n2 is None and angle is not None:
+        v1 = node.vector_to(n1, normalize=True)
+        rot_mat = np.array([(math.cos(angle), -math.sin(angle)), (math.sin(angle), math.cos(angle))])
+        v_norm = rot_mat.dot(v1)
+        v_new = v_curr + v_norm * const
+        latlng_new = LatLng(math.degrees(v_new[0]), math.degrees(v_new[1]))
+        return Node(None, latlng_new)
+    else:
+        v1 = node.vector_to(n1, normalize=True)
+        v2 = node.vector_to(n2, normalize=True)
+        v = v1 + v2
+        v_norm = v / np.linalg.norm(v)
+        v_new = v_curr + v_norm * const
+        latlng_new = LatLng(v_new[0], v_new[1])
+        return Node(None, latlng_new)
+
+
+def swap_nodes(sidewalk_nodes, sidewalk, nid_from, nid_to):
+    index_from = sidewalk.nids.index(nid_from)
+    sidewalk.nids[index_from] = nid_to
+    sidewalk_nodes.remove(nid_from)
+    return sidewalk_nodes, sidewalk
+
+
+def make_crosswalks(street_nodes, sidewalk_nodes, streets, sidewalks):
+    # Some helper functions
 
     intersection_node_ids = streets.intersection_node_ids
     intersection_nodes = [street_nodes.get(nid) for nid in intersection_node_ids]
@@ -152,7 +170,7 @@ def make_crosswalks(street_nodes, sidewalk_nodes, streets, sidewalks):
             else:
                 adj_street_nodes.append(street_nodes.get(street.nids[-2]))
 
-        adj_street_nodes = sorted(adj_street_nodes, cmp=cmp)  # Sort counter clockwise
+        adj_street_nodes = sort_nodes(intersection_node, adj_street_nodes)
         v_curr = intersection_node.vector()
 
         # Creat new intersection sidewalk nodes
@@ -237,6 +255,7 @@ def make_crosswalks(street_nodes, sidewalk_nodes, streets, sidewalks):
                     sidewalk = sidewalks.get(sidewalk_id)
 
                     # Swap the sidewalk intersection_sidewalk_node with crosswalk_node
+
                     potential_nodes_to_swap = [n.id for n in ni.get_sidewalk_nodes(shared_street_id)]
                     intersection_sidewalk_node_ids = set(sidewalk.nids) & set(potential_nodes_to_swap)
 
@@ -254,9 +273,11 @@ def make_crosswalks(street_nodes, sidewalk_nodes, streets, sidewalks):
                         intersection_sidewalk_node_ids = set(sidewalk.nids) & set(potential_nodes_to_swap)
 
                     intersection_sidewalk_node_id = list(intersection_sidewalk_node_ids)[0]
-                    intersection_sidewalk_node_id_index = sidewalk.nids.index(intersection_sidewalk_node_id)
-                    sidewalk.nids[intersection_sidewalk_node_id_index] = crosswalk_node.id
-                    sidewalk_nodes.remove(intersection_sidewalk_node_id)
+                    # intersection_sidewalk_node_id_index = sidewalk.nids.index(intersection_sidewalk_node_id)
+                    # sidewalk.nids[intersection_sidewalk_node_id_index] = crosswalk_node.id
+                    # sidewalk_nodes.remove(intersection_sidewalk_node_id)
+
+                    swap_nodes(sidewalk_nodes, sidewalk, intersection_sidewalk_node_id, crosswalk_node.id)
 
                     if len(set(crosswalk_node.get_way_ids())) == 1:
                         break
@@ -324,9 +345,10 @@ def make_crosswalks(street_nodes, sidewalk_nodes, streets, sidewalks):
                         intersection_sidewalk_node_ids = set(sidewalk.nids) & set(potential_nodes_to_swap)
 
                     intersection_sidewalk_node_id = list(intersection_sidewalk_node_ids)[0]
-                    intersection_sidewalk_node_id_index = sidewalk.nids.index(intersection_sidewalk_node_id)
-                    sidewalk.nids[intersection_sidewalk_node_id_index] = crosswalk_node.id
-                    sidewalk_nodes.remove(intersection_sidewalk_node_id)
+                    # intersection_sidewalk_node_id_index = sidewalk.nids.index(intersection_sidewalk_node_id)
+                    # sidewalk.nids[intersection_sidewalk_node_id_index] = crosswalk_node.id
+                    # sidewalk_nodes.remove(intersection_sidewalk_node_id)
+                    swap_nodes(sidewalk_nodes, sidewalk, intersection_sidewalk_node_id, crosswalk_node.id)
 
     return sidewalk_nodes, sidewalks
 

@@ -51,10 +51,10 @@ class Node(object):
         return
 
     def vector(self):
-        return np.array(self.latlng.location())
+        return np.array(self.latlng.location(radian=False))
 
     def vector_to(self, node, normalize=True):
-        vec = np.array(node.latlng.location()) - np.array(self.latlng.location())
+        vec = np.array(node.latlng.location(radian=False)) - np.array(self.latlng.location(radian=False))
         if normalize:
             vec = vec / np.linalg.norm(vec)
         return vec
