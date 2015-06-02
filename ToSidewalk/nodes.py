@@ -43,6 +43,15 @@ class Node(object):
     def get_way_ids(self):
         return self.way_ids
 
+    def get_shared_way_ids(self, other):
+        """
+        Other could be either a list of way ids, or a Node object
+        """
+        if type(other) == list:
+            return list(set(self.way_ids) & set(other))
+        else:
+            return list(set(self.way_ids) & set(other.get_way_ids()))
+
     def get_sidewalk_nodes(self, wid):
         return self.sidewalk_nodes[wid]
 
@@ -60,9 +69,16 @@ class Node(object):
         return vec
 
 
+class CrosswalkNode(Node):
+    def __init__(self, nid=None, latlng=None):
+        super(CrosswalkNode, self).__init__(nid, latlng)
+        self.intersection_node_id = None
+        self.adjacent_node_ids = []
+
 class Nodes(object):
     def __init__(self):
         self.nodes = {}
+        self.crosswalk_node_ids = []
         return
 
     def add(self, nid, node):
