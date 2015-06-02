@@ -1,5 +1,4 @@
 from xml.etree import cElementTree as ET
-import geojsonio
 
 from latlng import LatLng
 from nodes import Node, Nodes
@@ -304,4 +303,3 @@ if __name__ == "__main__":
 
     geojson = osm_obj.export(format='geojson')
 
-    geojsonio.display(geojson)

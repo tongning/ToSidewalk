@@ -1,4 +1,3 @@
-import geojsonio
 import logging as log
 import math
 import numpy as np
@@ -338,7 +337,6 @@ def main(street_nodes, streets):
     make_crosswalks(street_nodes, osm.nodes, streets, osm.ways)
 
     output = osm.export(format='geojson')
-    # geojsonio.display(output)
     print output
 
 
