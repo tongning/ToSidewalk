@@ -15,6 +15,7 @@ class Node(object):
         self.way_ids = []
         self.sidewalk_nodes = {}
         self.min_intersection_cardinality = 2
+        self.crosswalk_distance = 0.00008
         return
 
     def __str__(self):
@@ -65,7 +66,7 @@ class Node(object):
     def vector_to(self, node, normalize=True):
         vec = np.array(node.latlng.location(radian=False)) - np.array(self.latlng.location(radian=False))
         if normalize:
-            vec = vec / np.linalg.norm(vec)
+            vec /= np.linalg.norm(vec)
         return vec
 
 
@@ -97,6 +98,10 @@ class Nodes(object):
     def remove(self, nid):
         # http://stackoverflow.com/questions/5844672/delete-an-element-from-a-dictionary
         del self.nodes[nid]
+        return
+
+    def update(self, nid, new_node):
+        self.nodes[nid] = new_node
         return
 
 def print_intersections(nodes):

@@ -121,26 +121,24 @@ def sort_nodes(center_node, nodes):
             return 0
         else:
             return 1
-
     return sorted(nodes, cmp=cmp)
 
+
 def make_crosswalk_node(node, n1, n2, angle=None):
-    # const = 0.000001414
-    const = 0.00008
     v_curr = node.vector()
 
     if n2 is None and angle is not None:
         v1 = node.vector_to(n1, normalize=True)
         rot_mat = np.array([(math.cos(angle), -math.sin(angle)), (math.sin(angle), math.cos(angle))])
         v_norm = rot_mat.dot(v1)
-        v_new = v_curr + v_norm * const
+        v_new = v_curr + v_norm * node.crosswalk_distance  # const
         latlng_new = LatLng(v_new[0], v_new[1])
     else:
         v1 = node.vector_to(n1, normalize=True)
         v2 = node.vector_to(n2, normalize=True)
         v = v1 + v2
         v_norm = v / np.linalg.norm(v)
-        v_new = v_curr + v_norm * const
+        v_new = v_curr + v_norm * node.crosswalk_distance  # const
         latlng_new = LatLng(v_new[0], v_new[1])
     node = CrosswalkNode(None, latlng_new)
     node.intersection_node_id = node.id
@@ -148,18 +146,24 @@ def make_crosswalk_node(node, n1, n2, angle=None):
     return node
 
 
-def swap_nodes(sidewalk_nodes, sidewalk, nid_from, nid_to):
+def swap_nodes(sidewalk, nid_from, nid_to):
     index_from = sidewalk.nids.index(nid_from)
     sidewalk.nids[index_from] = nid_to
-    sidewalk_nodes.remove(nid_from)
-    return sidewalk_nodes, sidewalk
+    return
 
 
-def create_crosswalk_nodes(sidewalks, sidewalk_nodes, intersection_node, adj_street_nodes):
-    # Creat new intersection sidewalk nodes
-    # Record from which street nodes each intersection node is created with source_table
+def create_crosswalk_nodes(intersection_node, adj_street_nodes):
+    """
+    Create new crosswalk nodes
+    :param intersection_node:
+    :param adj_street_nodes:
+    :return: crosswalk_nodes, source_table
+    """
+    if len(adj_street_nodes) < 4:
+        raise ValueError("You need to pass 4 or more ndoes for adj_street_nodes ")
+
     source_table = {}
-    crosswalk_node_ids = []
+    crosswalk_nodes = []
     for i in range(len(adj_street_nodes)):
         n1 = adj_street_nodes[i - 1]
         n2 = adj_street_nodes[i]
@@ -174,16 +178,10 @@ def create_crosswalk_nodes(sidewalks, sidewalk_nodes, intersection_node, adj_str
         way_ids = intersection_node.get_shared_way_ids(way_ids)
 
         crosswalk_node.way_ids = way_ids
-        sidewalk_nodes.add(crosswalk_node.id, crosswalk_node)
-        sidewalk_nodes.crosswalk_node_ids.append(crosswalk_node.id)
-        crosswalk_node_ids.append(crosswalk_node.id)
+        crosswalk_nodes.append(crosswalk_node)
         source_table[crosswalk_node.id] = [intersection_node, n1, n2]
 
-    crosswalk_node_ids.append(crosswalk_node_ids[0])
-    crosswalk = Sidewalk(None, crosswalk_node_ids, "crosswalk")
-    sidewalks.add(crosswalk.id, crosswalk)
-
-    return sidewalks, sidewalk_nodes, source_table
+    return crosswalk_nodes, source_table
 
 
 def get_adj_street_nodes(intersection_node, streets, street_nodes):
@@ -246,7 +244,8 @@ def connect_crosswalk_nodes(sidewalks, sidewalk_nodes, source_table):
             potential_nodes_to_swap = [n.id for n in intersection_node.get_sidewalk_nodes(shared_street_id)]
             intersection_sidewalk_node_ids = set(sidewalk.nids) & set(potential_nodes_to_swap)
             intersection_sidewalk_node_id = list(intersection_sidewalk_node_ids)[0]
-            swap_nodes(sidewalk_nodes, sidewalk, intersection_sidewalk_node_id, crosswalk_node.id)
+            sidewalk.swap_nodes(intersection_sidewalk_node_id, crosswalk_node.id)
+            sidewalk_nodes.remove(intersection_sidewalk_node_id)
 
             if len(set(crosswalk_node.get_way_ids())) == 1:
                 break
@@ -257,7 +256,7 @@ def connect_crosswalk_nodes(sidewalks, sidewalk_nodes, source_table):
 def make_crosswalks(street_nodes, sidewalk_nodes, streets, sidewalks):
     # Some helper functions
 
-    intersection_node_ids = streets.intersection_node_ids
+    intersection_node_ids = list(streets.intersection_node_ids)
     intersection_nodes = [street_nodes.get(nid) for nid in intersection_node_ids]
 
     # Create sidewalk nodes for each intersection node and overwrite the adjacency information
@@ -283,7 +282,15 @@ def make_crosswalks(street_nodes, sidewalk_nodes, streets, sidewalks):
             adj_street_nodes.insert(idx, dummy_node)
 
         # Create crosswalk nodes and add a cross walk to the data structure
-        sidewalks, sidewalk_nodes, source_table = create_crosswalk_nodes(sidewalks, sidewalk_nodes, intersection_node, adj_street_nodes)
+        crosswalk_nodes, source_table = create_crosswalk_nodes(intersection_node, adj_street_nodes)
+        crosswalk_node_ids = [node.id for node in crosswalk_nodes]
+        crosswalk_node_ids.append(crosswalk_node_ids[0])
+        crosswalk = Sidewalk(None, crosswalk_node_ids, "crosswalk")
+        for crosswalk_node in crosswalk_nodes:
+            sidewalk_nodes.add(crosswalk_node.id, crosswalk_node)
+            sidewalk_nodes.crosswalk_node_ids.append(crosswalk_node.id)
+
+        sidewalks.add(crosswalk.id, crosswalk)
 
         # Connect the crosswalk nodes with correct sidewalk nodes
         sidewalk_nodes, sidewalks = connect_crosswalk_nodes(sidewalks, sidewalk_nodes, source_table)
@@ -296,7 +303,7 @@ def main(street_nodes, streets):
     make_crosswalks(street_nodes, osm.nodes, streets, osm.ways)
 
     output = osm.export(format='geojson')
-    print output
+    return output
 
 
 if __name__ == "__main__":
@@ -306,8 +313,8 @@ if __name__ == "__main__":
     # filename = "../resources/TShapeIntersection_02.osm"
     #filename = "../resources/SegmentedStreet_01.osm"
     #filename = "../resources/ComplexIntersection_01.osm"
-    #filename = "../resources/SmallMap_01.osm"
-    filename = "../resources/SmallMap_02.osm"
+    filename = "../resources/SmallMap_01.osm"
+    # filename = "../resources/SmallMap_02.osm"
     # filename = "../resources/ParallelLanes_01.osm"
     nodes, ways = parse(filename)
     osm_obj = OSM(nodes, ways)
@@ -315,4 +322,4 @@ if __name__ == "__main__":
 
     # output = osm_obj.export()
     # print output
-    main(osm_obj.nodes, osm_obj.ways)
+    print main(osm_obj.nodes, osm_obj.ways)

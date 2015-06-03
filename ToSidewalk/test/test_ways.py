@@ -19,5 +19,10 @@ class TestWayMethods(unittest.TestCase):
         self.assertTrue(way.get_node_ids()[2], nids[2])
 
 
+class TestSidewalkMethods(unittest.TestCase):
+    def test_swap_nodes(self):
+        # Todo
+        pass
+
 if __name__ == '__main__':
     unittest.main()

@@ -62,6 +62,10 @@ class Sidewalk(Way):
         self.street_id = street_id
         return
 
+    def swap_nodes(self, nid_from, nid_to):
+        index_from = self.nids.index(nid_from)
+        self.nids[index_from] = nid_to
+
 class Sidewalks(Ways):
     def __init__(self):
         super(Sidewalks, self).__init__()
