@@ -61,12 +61,14 @@ class OSM(Network):
         # self.bounds = [100000.0, 100000.0, -1.0, -1.0]  # min lat, min lng, max lat, and max lng
 
         # Preprocess and clean up the data
-
+        self.merge_parallel_street_segments()
         self.split_streets()
+        self.update_ways()
         self.merge_nodes()
+
+        # Clean up and so I can make a sidewalk network
         self.clean_up_nodes()
         self.clean_street_segmentation()
-        self.merge_parallel_street_segments()
 
         # Remove ways that have only a single node.
         for way in self.ways.get_list():
@@ -265,8 +267,7 @@ class OSM(Network):
             if pair[0].intersects(pair[1]) and angle_diff < 10.:
                 # If the polygon intersects, and they have a kind of similar angle, and they don't share a node,
                 # then they should be merged together.
-                print street_polygons.index(pair[0]), pair[0].nids
-
+                print street_polygons.index(pair[0]), street_polygons.index(pair[0]), pair[0].nids, pair[1].nids
 
     def split_streets(self):
         """
@@ -301,6 +302,9 @@ class OSM(Network):
                     new_streets.add(new_way.id, new_way)
         self.ways = new_streets
 
+        return
+
+    def update_ways(self):
         # Update the way_ids
         for node in self.nodes.get_list():
             # Now the minimum number of ways connected has to be 3 for the node to be an intersection
@@ -309,7 +313,6 @@ class OSM(Network):
         for street in self.ways.get_list():
             for nid in street.nids:
                 self.nodes.get(nid).append_way(street.id)
-        return
 
 
 def parse(filename):
