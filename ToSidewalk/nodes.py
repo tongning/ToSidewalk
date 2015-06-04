@@ -16,6 +16,7 @@ class Node(object):
         self.sidewalk_nodes = {}
         self.min_intersection_cardinality = 2
         self.crosswalk_distance = 0.00008
+        self.parents = ()
         return
 
     def __str__(self):
@@ -63,7 +64,7 @@ class Node(object):
     def vector(self):
         return np.array(self.latlng.location(radian=False))
 
-    def vector_to(self, node, normalize=True):
+    def vector_to(self, node, normalize=False):
         vec = np.array(node.latlng.location(radian=False)) - np.array(self.latlng.location(radian=False))
         if normalize:
             vec /= np.linalg.norm(vec)

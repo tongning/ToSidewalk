@@ -59,15 +59,15 @@ class TestToSidewalkMethods(unittest.TestCase):
         # Parameter Error:
         # http://stackoverflow.com/questions/256222/which-exception-should-i-raise-on-bad-illegal-argument-combinations-in-python
         adjacent_nodes = [node1, node2]
-        self.assertRaises(ValueError, create_crosswalk_nodes, cnode, adjacent_nodes)
+        self.assertRaises(ValueError, make_crosswalk_nodes, cnode, adjacent_nodes)
         adjacent_nodes = [node1, node2, node3]
-        self.assertRaises(ValueError, create_crosswalk_nodes, cnode, adjacent_nodes)
+        self.assertRaises(ValueError, make_crosswalk_nodes, cnode, adjacent_nodes)
 
         # Opposite of assertRaises
         # http://stackoverflow.com/questions/4319825/python-unittest-opposite-of-assertraises
         try:
             adjacent_nodes = [node1, node2, node3, node4]
-            create_crosswalk_nodes(cnode, adjacent_nodes)
+            make_crosswalk_nodes(cnode, adjacent_nodes)
         except ValueError:
             self.fail("create_crosswalk_nodes() failed unexpectedly")
 
@@ -83,17 +83,21 @@ class TestToSidewalkMethods(unittest.TestCase):
             "../../resources/SegmentedStreet_01.osm",
             "../../resources/ComplexIntersection_01.osm",
             "../../resources/SmallMap_01.osm",
-            "../../resources/SmallMap_02.osm"
-            # "../../resources/ParallelLanes_01.osm"  # Todo. This fails.
+            "../../resources/SmallMap_02.osm",
+            "../../resources/ParallelLanes_01.osm"
         ]
         for filename in filenames:
             nodes, ways = parse(filename)
             osm_obj = OSM(nodes, ways)
             osm_obj.parse_intersections()
-
-            # output = osm_obj.export()
-            # print output
             main(osm_obj)
+
+    # def test_main2(self):
+    #     filename = "../../resources/ParallelLanes_01.osm"
+    #     nodes, ways = parse(filename)
+    #     street_network = OSM(nodes, ways)
+    #     street_network.parse_intersections()
+    #     main(street_network)
 
 if __name__ == '__main__':
     unittest.main()

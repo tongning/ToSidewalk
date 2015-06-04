@@ -44,6 +44,10 @@ class Network(object):
 
         return adj_nodes
 
+    def parse_intersections(self):
+        parse_intersections(self.nodes, self.ways)
+        return
+
 class OSM(Network):
 
     def __init__(self, nodes, ways):
@@ -224,10 +228,6 @@ class OSM(Network):
 
     def merge_parallel_street_segments(self):
         merge_parallel_street_segments(self.nodes, self.ways)
-        return
-
-    def parse_intersections(self):
-        parse_intersections(self.nodes, self.ways)
         return
 
     def split_streets(self):

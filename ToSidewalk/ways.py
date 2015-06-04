@@ -12,6 +12,15 @@ class Way(object):
     def get_node_ids(self):
         return self.nids
 
+    def get_shared_node_ids(self, other):
+        """
+        Other could be either a list of node ids or a Way object
+        """
+        if type(other) == list:
+            return list(set(self.nids) & set(other))
+        else:
+            return list(set(self.nids) & set(other.get_node_ids()))
+
 class Ways(object):
     def __init__(self):
         self.ways = {}
@@ -40,7 +49,7 @@ class Street(Way):
     def __init__(self, wid=None, nids=(), type=None):
         super(Street, self).__init__(wid, nids, type)
         self.sidewalk_ids = []  # Keep track of which sidewalks were generated from this way
-        self.dist_to_sidewalk = 0.000001
+        self.distance_to_sidewalk = 0.000001
 
     def append_sidewalk_id(self, way_id):
         self.sidewalk_ids.append(way_id)
