@@ -1,4 +1,5 @@
 from xml.etree import cElementTree as ET
+from shapely.geometry import Polygon
 
 from latlng import LatLng
 from nodes import Node, Nodes
@@ -227,7 +228,8 @@ class OSM(Network):
         return
 
     def merge_parallel_street_segments(self):
-        merge_parallel_street_segments(self.nodes, self.ways)
+        # Expand streets into rectangles, then find intersections between them.
+        # http://gis.stackexchange.com/questions/90055/how-to-find-if-two-polygons-intersect-in-python
         return
 
     def split_streets(self):
@@ -272,11 +274,6 @@ class OSM(Network):
             for nid in street.nids:
                 self.nodes.get(nid).append_way(street.id)
         return
-
-
-def merge_parallel_street_segments(node, ways):
-
-    return
 
 
 def parse(filename):

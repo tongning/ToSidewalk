@@ -175,6 +175,12 @@ def make_crosswalk_nodes(intersection_node, adj_street_nodes):
 
 
 def connect_crosswalk_nodes(sidewalk_network, crosswalk):
+    """
+    Connect crosswalk nodes to appropriate sidewalk nodes.
+    :param sidewalk_network:
+    :param crosswalk:
+    :return:
+    """
     sidewalks, sidewalk_nodes = sidewalk_network.ways, sidewalk_network.nodes
 
     crosswalk_node_ids = crosswalk.get_node_ids()[:-1]  # Crosswalk has a redundant node at the end.
