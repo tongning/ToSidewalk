@@ -70,12 +70,6 @@ class Node(object):
         return vec
 
 
-class CrosswalkNode(Node):
-    def __init__(self, nid=None, latlng=None):
-        super(CrosswalkNode, self).__init__(nid, latlng)
-        self.intersection_node_id = None
-        self.adjacent_node_ids = []
-
 class Nodes(object):
     def __init__(self):
         self.nodes = {}

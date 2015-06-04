@@ -93,7 +93,7 @@ class TestToSidewalkMethods(unittest.TestCase):
 
             # output = osm_obj.export()
             # print output
-            main(osm_obj.nodes, osm_obj.ways)
+            main(osm_obj)
 
 if __name__ == '__main__':
     unittest.main()

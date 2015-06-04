@@ -3,10 +3,10 @@ import math
 import numpy as np
 
 from latlng import LatLng
-from nodes import Node, Nodes, CrosswalkNode
+from nodes import Node, Nodes
 from ways import Sidewalk, Sidewalks
 from utilities import window
-from osm import OSM, parse
+from network import OSM, parse
 
 log.basicConfig(format="", level=log.DEBUG)
 
@@ -58,7 +58,8 @@ def make_sidewalk_nodes(street, prev_node, curr_node, next_node):
         return p_sidewalk_2, p_sidewalk_1
 
 
-def make_sidewalks(street_nodes, streets):
+def make_sidewalks(street_network):
+    street_nodes, streets = street_network.nodes, street_network.ways
     # Go through each street and create sidewalks on both sides of the road.
     sidewalks = Sidewalks()
     sidewalk_nodes = Nodes()
@@ -140,9 +141,9 @@ def make_crosswalk_node(node, n1, n2, angle=None):
         v_norm = v / np.linalg.norm(v)
         v_new = v_curr + v_norm * node.crosswalk_distance  # const
         latlng_new = LatLng(v_new[0], v_new[1])
-    node = CrosswalkNode(None, latlng_new)
-    node.intersection_node_id = node.id
-    node.adjacent_node_ids = [n1.id, n2.id]
+    node = Node(None, latlng_new)
+    # node.intersection_node_id = node.id
+    # node.adjacent_node_ids = [n1.id, n2.id]
     return node
 
 
@@ -182,21 +183,6 @@ def create_crosswalk_nodes(intersection_node, adj_street_nodes):
         source_table[crosswalk_node.id] = [intersection_node, n1, n2]
 
     return crosswalk_nodes, source_table
-
-
-def get_adj_street_nodes(intersection_node, streets, street_nodes):
-    street_ids = intersection_node.get_way_ids()
-    adj_street_nodes = []
-    for street_id in street_ids:
-        street = streets.get(street_id)
-
-        # If the current intersection node is at the head of street.nids, then take the second node and push it
-        # into adj_street_nodes. Otherwise, take the node that is second to the last in street.nids .
-        if street.nids[0] == intersection_node.id:
-            adj_street_nodes.append(street_nodes.get(street.nids[1]))
-        else:
-            adj_street_nodes.append(street_nodes.get(street.nids[-2]))
-    return adj_street_nodes
 
 
 def connect_crosswalk_nodes(sidewalks, sidewalk_nodes, source_table):
@@ -253,15 +239,17 @@ def connect_crosswalk_nodes(sidewalks, sidewalk_nodes, source_table):
     return sidewalk_nodes, sidewalks
 
 
-def make_crosswalks(street_nodes, sidewalk_nodes, streets, sidewalks):
+def make_crosswalks(street_network, sidewalk_network):
     # Some helper functions
+    street_nodes, streets = street_network.nodes, street_network.ways
+    sidewalk_nodes, sidewalks = sidewalk_network.nodes, sidewalk_network.ways
 
     intersection_node_ids = list(streets.intersection_node_ids)
     intersection_nodes = [street_nodes.get(nid) for nid in intersection_node_ids]
 
     # Create sidewalk nodes for each intersection node and overwrite the adjacency information
     for intersection_node in intersection_nodes:
-        adj_street_nodes = get_adj_street_nodes(intersection_node, streets, street_nodes)
+        adj_street_nodes = street_network.get_adjacent_nodes(intersection_node)
         adj_street_nodes = sort_nodes(intersection_node, adj_street_nodes)
         v_curr = intersection_node.vector()
 
@@ -297,29 +285,22 @@ def make_crosswalks(street_nodes, sidewalk_nodes, streets, sidewalks):
     return sidewalk_nodes, sidewalks
 
 
-def main(street_nodes, streets):
-    sidewalk_nodes, sidewalks = make_sidewalks(street_nodes, streets)
-    osm = OSM(sidewalk_nodes, sidewalks)
-    make_crosswalks(street_nodes, osm.nodes, streets, osm.ways)
+def main(street_network):
+    street_nodes = street_network.nodes
+    streets = street_network.ways
+    sidewalk_nodes, sidewalks = make_sidewalks(street_network)
+    sidewalk_network = OSM(sidewalk_nodes, sidewalks)
+    make_crosswalks(street_network, sidewalk_network)
 
-    output = osm.export(format='geojson')
+    output = sidewalk_network.export(format='geojson')
     return output
 
 
 if __name__ == "__main__":
-    #filename = "../resources/Simple4WayIntersection_01.osm"
-    #filename = "../resources/Simple4WayIntersection_02.osm"
-    # filename = "../resources/TShapeIntersection_01.osm"
-    # filename = "../resources/TShapeIntersection_02.osm"
-    #filename = "../resources/SegmentedStreet_01.osm"
-    #filename = "../resources/ComplexIntersection_01.osm"
     filename = "../resources/SmallMap_01.osm"
-    # filename = "../resources/SmallMap_02.osm"
     # filename = "../resources/ParallelLanes_01.osm"
     nodes, ways = parse(filename)
-    osm_obj = OSM(nodes, ways)
-    osm_obj.parse_intersections()
+    street_network = OSM(nodes, ways)
+    street_network.parse_intersections()
 
-    # output = osm_obj.export()
-    # print output
-    print main(osm_obj.nodes, osm_obj.ways)
+    print main(street_network)
