@@ -1,5 +1,7 @@
 from xml.etree import cElementTree as ET
 from shapely.geometry import Polygon
+import numpy as np
+import math
 
 from latlng import LatLng
 from nodes import Node, Nodes
@@ -59,11 +61,12 @@ class OSM(Network):
         # self.bounds = [100000.0, 100000.0, -1.0, -1.0]  # min lat, min lng, max lat, and max lng
 
         # Preprocess and clean up the data
+
         self.split_streets()
-        self.merge_parallel_street_segments()
         self.merge_nodes()
         self.clean_up_nodes()
         self.clean_street_segmentation()
+        self.merge_parallel_street_segments()
 
         # Remove ways that have only a single node.
         for way in self.ways.get_list():
@@ -228,9 +231,42 @@ class OSM(Network):
         return
 
     def merge_parallel_street_segments(self):
+        """
+        This method needs to be optimized using some spatial data structure (e.g., r*-tree) and other metadata..
         # Expand streets into rectangles, then find intersections between them.
         # http://gis.stackexchange.com/questions/90055/how-to-find-if-two-polygons-intersect-in-python
-        return
+        """
+
+        streets = self.ways.get_list()
+        street_polygons = []
+        distance_to_sidewalk = 0.0003
+        for street in streets:
+            start_node_id = street.get_node_ids()[0]
+            end_node_id = street.get_node_ids()[-1]
+            start_node = self.nodes.get(start_node_id)
+            end_node = self.nodes.get(end_node_id)
+            vector = start_node.vector_to(end_node, normalize=True)
+            perpendicular = np.array([vector[1], - vector[0]]) * distance_to_sidewalk
+            p1 = start_node.vector() + perpendicular
+            p2 = end_node.vector() + perpendicular
+            p3 = end_node.vector() - perpendicular
+            p4 = start_node.vector() - perpendicular
+
+            poly = Polygon([p1, p2, p3, p4])
+            poly.angle = math.degrees(math.atan2(vector[0], vector[1]))
+            poly.nids = set((start_node_id, end_node_id))
+            street_polygons.append(poly)
+
+        from itertools import combinations
+        polygon_combinations = combinations(street_polygons, 2)
+        intersecting_pairs = []
+        for pair in polygon_combinations:
+            angle_diff = ((pair[0].angle - pair[1].angle) + 180.) % 180.
+            if pair[0].intersects(pair[1]) and angle_diff < 10.:
+                # If the polygon intersects, and they have a kind of similar angle, and they don't share a node,
+                # then they should be merged together.
+                print street_polygons.index(pair[0]), pair[0].nids
+
 
     def split_streets(self):
         """
@@ -324,10 +360,12 @@ def parse_intersections(nodes, ways):
     return
 
 if __name__ == "__main__":
-    filename = "../resources/SegmentedStreet_01.osm"
+    # filename = "../resources/SegmentedStreet_01.osm"
+    filename = "../resources/ParallelLanes_01.osm"
     nodes, ways = parse(filename)
-    osm_obj = OSM(nodes, ways)
-    osm_obj.parse_intersections()
+    street_network = OSM(nodes, ways)
+    street_network.parse_intersections()
 
-    geojson = osm_obj.export(format='geojson')
+    geojson = street_network.export(format='geojson')
+    # print geojson
 
