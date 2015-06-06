@@ -310,6 +310,7 @@ if __name__ == "__main__":
     filename = "../resources/ParallelLanes_01.osm"
     nodes, ways = parse(filename)
     street_network = OSM(nodes, ways)
+    street_network.preprocess()
     street_network.parse_intersections()
 
     print main(street_network)

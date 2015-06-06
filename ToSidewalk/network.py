@@ -1,5 +1,5 @@
 from xml.etree import cElementTree as ET
-from shapely.geometry import Polygon
+from shapely.geometry import Polygon, Point, LineString
 import numpy as np
 import math
 
@@ -60,6 +60,7 @@ class OSM(Network):
 
         # self.bounds = [100000.0, 100000.0, -1.0, -1.0]  # min lat, min lng, max lat, and max lng
 
+    def preprocess(self):
         # Preprocess and clean up the data
         self.merge_parallel_street_segments()
         self.split_streets()
@@ -77,6 +78,7 @@ class OSM(Network):
                     n = self.nodes.get(nid)
                     n.remove_way_id(way.id)
                 self.ways.remove(way.id)
+        return
 
     def clean_up_nodes(self):
         """
@@ -234,7 +236,8 @@ class OSM(Network):
 
     def merge_parallel_street_segments(self):
         """
-        This method needs to be optimized using some spatial data structure (e.g., r*-tree) and other metadata..
+        Todo: This method needs to be optimized using some spatial data structure (e.g., r*-tree) and other metadata..
+        Todo. And I should break this function into find_parallel_street_segments and merge_parallel_street_segments.
         # Expand streets into rectangles, then find intersections between them.
         # http://gis.stackexchange.com/questions/90055/how-to-find-if-two-polygons-intersect-in-python
         """
@@ -242,11 +245,13 @@ class OSM(Network):
         streets = self.ways.get_list()
         street_polygons = []
         distance_to_sidewalk = 0.0003
+
         for street in streets:
             start_node_id = street.get_node_ids()[0]
             end_node_id = street.get_node_ids()[-1]
             start_node = self.nodes.get(start_node_id)
             end_node = self.nodes.get(end_node_id)
+
             vector = start_node.vector_to(end_node, normalize=True)
             perpendicular = np.array([vector[1], - vector[0]]) * distance_to_sidewalk
             p1 = start_node.vector() + perpendicular
@@ -259,15 +264,123 @@ class OSM(Network):
             poly.nids = set((start_node_id, end_node_id))
             street_polygons.append(poly)
 
+        # Find pair of polygons that intersect each other.
         from itertools import combinations
         polygon_combinations = combinations(street_polygons, 2)
-        intersecting_pairs = []
+        parallel_pairs = []
         for pair in polygon_combinations:
             angle_diff = ((pair[0].angle - pair[1].angle) + 180.) % 180.
             if pair[0].intersects(pair[1]) and angle_diff < 10.:
                 # If the polygon intersects, and they have a kind of similar angle, and they don't share a node,
                 # then they should be merged together.
-                print street_polygons.index(pair[0]), street_polygons.index(pair[0]), pair[0].nids, pair[1].nids
+
+                parallel_pairs.append((street_polygons.index(pair[0]), street_polygons.index(pair[1])))
+
+        # Merge parallel pairs
+        for pair in parallel_pairs:
+            street_pair = (streets[pair[0]], streets[pair[1]])
+
+            shared_nids = set(street_pair[0].nids) & set(street_pair[1].nids)
+
+            # Find the adjacent nodes for the shared node
+            if len(shared_nids) > 0:
+                # Two paths merges at one node
+                shared_nid = list(shared_nids)[0]
+                shared_node = self.nodes.get(shared_nid)
+                idx1 = street_pair[0].nids.index(shared_nid)
+                idx2 = street_pair[1].nids.index(shared_nid)
+
+                # Nodes are sorted by longitude (x-axis), so two paths should merge at the left-most node or the
+                # right most node.
+                if idx1 == 0 and idx2 == 0:
+                    adj_nid1 = street_pair[0].nids[1]
+                    adj_nid2 = street_pair[1].nids[1]
+                else:
+                    adj_nid1 = street_pair[0].nids[-2]
+                    adj_nid2 = street_pair[1].nids[-2]
+
+                adj_node1 = self.nodes.get(adj_nid1)
+                adj_node2 = self.nodes.get(adj_nid2)
+                angle_to_node1 = math.degrees(shared_node.angle_to(adj_node1))
+                angle_to_node2 = math.degrees(shared_node.angle_to(adj_node2))
+                if abs(angle_to_node2 - angle_to_node1) > 90:
+                    # Paths are connected but they are not parallel lines
+                    continue
+
+            # Merge two streets
+            s0_idx = 0
+            s1_idx = 0
+            while True:
+                s0_node0 = self.nodes.get(street_pair[0].nids[s0_idx])
+                s0_node1 = self.nodes.get(street_pair[0].nids[s0_idx + 1])
+                s1_node0 = self.nodes.get(street_pair[1].nids[s0_idx])
+                s1_node1 = self.nodes.get(street_pair[1].nids[s0_idx + 1])
+
+                s0_point0 = Point((s0_node0.latlng.lng, s0_node0.latlng.lat))
+                s0_point1 = Point((s0_node1.latlng.lng, s0_node1.latlng.lat))
+                s1_point0 = Point((s1_node0.latlng.lng, s1_node0.latlng.lat))
+                s1_point1 = Point((s1_node1.latlng.lng, s1_node1.latlng.lat))
+
+                segment0 = LineString((s0_point0, s0_point1))
+                segment1 = LineString((s1_point0, s1_point1))
+
+                d0 = s0_point1.distance(segment1)
+                d1 = s1_point1.distance(segment0)
+                print d0, d1
+                break
+
+
+                s
+                if s0_idx + 1 >= len(street_pair[0].nids) or s1_idx + 1 >= len(street_pair[1].nids):
+                    break
+
+            """
+            # First find parts of the streets that you want to merge (you don't want to merge entire streets
+            # because, for example, one could be much longer than the other.
+            all_nids = list(set(street_pair[0].nids + street_pair[1].nids))
+            all_nids = sorted(all_nids, key=lambda nid: self.nodes.get(nid).latlng.lng)
+
+            # print all_nids
+
+            # Condition in list comprehension
+            # http://stackoverflow.com/questions/4260280/python-if-else-in-list-comprehension
+            all_nids_street_indices = [0 if nid in street_pair[0].nids else 1 for nid in all_nids]
+            from utilities import window
+            all_nids_street_switch = [idx_pair[0] != idx_pair[1] for idx_pair in window(all_nids_street_indices, 2)]
+
+            # Find the first occurence of an element in a list
+            # http://stackoverflow.com/questions/9868653/find-first-list-item-that-matches-criteria
+            begin_idx = all_nids_street_switch.index(next(x for x in all_nids_street_switch if x == True))
+
+            # Find the last occurence of an element in a list
+            # http://stackoverflow.com/questions/6890170/how-to-find-the-last-occurrence-of-an-item-in-a-python-list
+            end_idx = (len(all_nids_street_switch) - 1) - all_nids_street_switch[::-1].index(next(x for x in all_nids_street_switch if x == True))
+
+            # print all_nids_street_indices[begin_idx:end_idx + 2]
+            # print all_nids[begin_idx:end_idx + 2]
+
+            subset_nids = all_nids[begin_idx:end_idx + 2]
+            if subset_nids[0] in streets[pair[0]].nids:
+                street1_begin_idx = streets[pair[0]].nids.index(subset_nids[0])
+                street1_begin_nid = subset_nids[0]
+                street2_begin_idx = streets[pair[1]].nids.index(subset_nids[1])
+                street2_begin_nid = subset_nids[1]
+            else:
+                street1_begin_idx = streets[pair[0]].nids.index(subset_nids[1])
+                street1_begin_nid = subset_nids[1]
+                street2_begin_idx = streets[pair[1]].nids.index(subset_nids[0])
+                street2_begin_nid = subset_nids[0]
+
+            print "all", all_nids
+            print "sub", subset_nids
+            print streets[pair[0]].nids
+            print streets[pair[1]].nids
+            print street1_begin_nid
+            print street2_begin_nid
+            print street1_begin_idx
+            print street2_begin_idx
+            print
+            """
 
     def split_streets(self):
         """
@@ -341,6 +454,10 @@ def parse(filename):
             node_elements = filter(lambda elem: elem.tag == "nd", list(way))
             nids = [node.get("ref") for node in node_elements]
 
+            # Sort the nodes by longitude.
+            if street_nodes.get(nids[0]).latlng.lng > street_nodes.get(nids[-1]).latlng.lng:
+                nids = nids[::-1]
+
             street = Street(way.get("id"), nids)
             streets.add(way.get("id"), street)
 
@@ -367,6 +484,7 @@ if __name__ == "__main__":
     filename = "../resources/ParallelLanes_01.osm"
     nodes, ways = parse(filename)
     street_network = OSM(nodes, ways)
+    street_network.preprocess()
     street_network.parse_intersections()
 
     geojson = street_network.export(format='geojson')
