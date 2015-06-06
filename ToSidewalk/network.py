@@ -62,11 +62,12 @@ class OSM(Network):
 
     def preprocess(self):
         # Preprocess and clean up the data
+
         self.merge_parallel_street_segments()
+
         self.split_streets()
         self.update_ways()
         self.merge_nodes()
-
         # Clean up and so I can make a sidewalk network
         self.clean_up_nodes()
         self.clean_street_segmentation()
@@ -307,38 +308,30 @@ class OSM(Network):
                     # Paths are connected but they are not parallel lines
                     continue
 
-            # Merge two streets
-            s0_idx = 0
-            s1_idx = 0
-            while True:
-                s0_node0 = self.nodes.get(street_pair[0].nids[s0_idx])
-                s0_node1 = self.nodes.get(street_pair[0].nids[s0_idx + 1])
-                s1_node0 = self.nodes.get(street_pair[1].nids[s0_idx])
-                s1_node1 = self.nodes.get(street_pair[1].nids[s0_idx + 1])
-
-                s0_point0 = Point((s0_node0.latlng.lng, s0_node0.latlng.lat))
-                s0_point1 = Point((s0_node1.latlng.lng, s0_node1.latlng.lat))
-                s1_point0 = Point((s1_node0.latlng.lng, s1_node0.latlng.lat))
-                s1_point1 = Point((s1_node1.latlng.lng, s1_node1.latlng.lat))
-
-                segment0 = LineString((s0_point0, s0_point1))
-                segment1 = LineString((s1_point0, s1_point1))
-
-                d0 = s0_point1.distance(segment1)
-                d1 = s1_point1.distance(segment0)
-                print d0, d1
-                break
-
-
-                s
-                if s0_idx + 1 >= len(street_pair[0].nids) or s1_idx + 1 >= len(street_pair[1].nids):
-                    break
-
-            """
             # First find parts of the streets that you want to merge (you don't want to merge entire streets
             # because, for example, one could be much longer than the other.
-            all_nids = list(set(street_pair[0].nids + street_pair[1].nids))
-            all_nids = sorted(all_nids, key=lambda nid: self.nodes.get(nid).latlng.lng)
+
+            # Take the first two points of street_pair[0], and use it as a base vector.
+            # Project all the points along the base vector and sort them.
+            base_node0 = self.nodes.get(street_pair[0].nids[0])
+            base_node1 = self.nodes.get(street_pair[0].nids[-1])
+            base_vector = base_node0.vector_to(base_node1, normalize=True)
+            def cmp_with_projection(n1, n2):
+                dot_product1 = np.dot(n1.vector(), base_vector)
+                dot_product2 = np.dot(n2.vector(), base_vector)
+                if dot_product1 < dot_product2:
+                    return -1
+                elif dot_product2 < dot_product1:
+                    return 1
+                else:
+                    return 0
+            all_nodes = [self.nodes.get(nid) for nid in street_pair[0].nids] + [self.nodes.get(nid) for nid in street_pair[1].nids]
+            all_nodes = sorted(all_nodes, cmp=cmp_with_projection)
+            all_nids = [node.id for node in all_nodes]
+
+            # for node in all_nodes:
+            #     print node.latlng
+            # return
 
             # print all_nids
 
@@ -359,28 +352,79 @@ class OSM(Network):
             # print all_nids_street_indices[begin_idx:end_idx + 2]
             # print all_nids[begin_idx:end_idx + 2]
 
-            subset_nids = all_nids[begin_idx:end_idx + 2]
+            # Find the parallel part of the two segments.
+            subset_nids = all_nids[begin_idx:end_idx + 1]
             if subset_nids[0] in streets[pair[0]].nids:
-                street1_begin_idx = streets[pair[0]].nids.index(subset_nids[0])
-                street1_begin_nid = subset_nids[0]
-                street2_begin_idx = streets[pair[1]].nids.index(subset_nids[1])
-                street2_begin_nid = subset_nids[1]
+                street1_idx = streets[pair[0]].nids.index(subset_nids[0])
+                street2_idx = streets[pair[1]].nids.index(subset_nids[1])
             else:
-                street1_begin_idx = streets[pair[0]].nids.index(subset_nids[1])
-                street1_begin_nid = subset_nids[1]
-                street2_begin_idx = streets[pair[1]].nids.index(subset_nids[0])
-                street2_begin_nid = subset_nids[0]
+                street1_idx = streets[pair[0]].nids.index(subset_nids[1])
+                street2_idx = streets[pair[1]].nids.index(subset_nids[0])
 
-            print "all", all_nids
-            print "sub", subset_nids
-            print streets[pair[0]].nids
-            print streets[pair[1]].nids
-            print street1_begin_nid
-            print street2_begin_nid
-            print street1_begin_idx
-            print street2_begin_idx
-            print
-            """
+            if subset_nids[-1] in streets[pair[0]].nids:
+                street1_end_idx = streets[pair[0]].nids.index(subset_nids[-1])
+                street2_end_idx = streets[pair[1]].nids.index(subset_nids[-2])
+            else:
+                street1_end_idx = streets[pair[0]].nids.index(subset_nids[-2])
+                street2_end_idx = streets[pair[1]].nids.index(subset_nids[-1])
+
+            # Get two parallel segments and the distance between them
+            street1_nid = streets[pair[0]].nids[street1_idx]
+            street2_nid = streets[pair[1]].nids[street2_idx]
+            street1_end_nid = streets[pair[0]].nids[street1_end_idx]
+            street2_end_nid = streets[pair[1]].nids[street2_end_idx]
+            street1_node = self.nodes.get(street1_nid)
+            street2_node = self.nodes.get(street2_nid)
+            street1_end_node = self.nodes.get(street1_end_nid)
+            street2_end_node = self.nodes.get(street2_end_nid)
+
+            LS_street1 = LineString((street1_node.latlng.location(radian=False), street1_end_node.latlng.location(radian=False)))
+            LS_street2 = LineString((street2_node.latlng.location(radian=False), street2_end_node.latlng.location(radian=False)))
+            distance = LS_street1.distance(LS_street2) / 2
+
+            # Merge streets
+            for nid in subset_nids:
+                if nid == street1_nid:
+                    # print "Street 1"
+                    street1_idx += 1
+                    street1_nid = streets[pair[0]].nids[street1_idx]
+
+                    node = self.nodes.get(nid)
+                    opposite_node_1 = self.nodes.get(street2_nid)
+                    opposite_node_2_nid = streets[pair[1]].nids[street2_idx + 1]
+                    opposite_node_2 = self.nodes.get(opposite_node_2_nid)
+
+                    v = opposite_node_1.vector_to(opposite_node_2, normalize=True)
+                    v2 = opposite_node_1.vector_to(node, normalize=True)
+                    if np.cross(v, v2) > 0:
+                        normal = np.array([v[1], v[0]])
+                    else:
+                        normal = np.array([- v[1], v[0]])
+                    new_position = node.latlng.location(radian=False) + normal * distance
+                    node.latlng.lat, node.latlng.lng = new_position
+
+                else:
+                    # print "Street 2"
+                    street2_idx += 1
+                    street2_nid = streets[pair[1]].nids[street2_idx]
+
+                    node = self.nodes.get(nid)
+                    opposite_node_1 = self.nodes.get(street1_nid)
+                    opposite_node_2_nid = streets[pair[0]].nids[street1_idx + 1]
+                    opposite_node_2 = self.nodes.get(opposite_node_2_nid)
+
+                    v = opposite_node_1.vector_to(opposite_node_2, normalize=True)
+                    v2 = opposite_node_1.vector_to(node, normalize=True)
+                    if np.cross(v, v2) > 0:
+                        normal = np.array([v[1], v[0]])
+                    else:
+                        normal = np.array([- v[1], v[0]])
+                    new_position = node.latlng.location(radian=False) + normal * distance
+                    node.latlng.lat, node.latlng.lng = new_position
+
+                # print node.latlng
+        return
+
 
     def split_streets(self):
         """
@@ -488,5 +532,5 @@ if __name__ == "__main__":
     street_network.parse_intersections()
 
     geojson = street_network.export(format='geojson')
-    # print geojson
+    print geojson
 
