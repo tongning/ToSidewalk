@@ -64,14 +64,14 @@ class OSM(Network):
     def preprocess(self):
         # Preprocess and clean up the data
 
-        self.merge_parallel_street_segments()
-
         self.split_streets()
         self.update_ways()
         self.merge_nodes()
         # Clean up and so I can make a sidewalk network
         self.clean_up_nodes()
         self.clean_street_segmentation()
+
+        self.merge_parallel_street_segments()
 
         # Remove ways that have only a single node.
         for way in self.ways.get_list():
@@ -317,6 +317,7 @@ class OSM(Network):
             base_node0 = self.nodes.get(street_pair[0].nids[0])
             base_node1 = self.nodes.get(street_pair[0].nids[-1])
             base_vector = base_node0.vector_to(base_node1, normalize=True)
+
             def cmp_with_projection(n1, n2):
                 dot_product1 = np.dot(n1.vector(), base_vector)
                 dot_product2 = np.dot(n2.vector(), base_vector)
@@ -378,8 +379,7 @@ class OSM(Network):
             distance = LS_street1.distance(LS_street2) / 2
 
             # Merge streets
-
-            # Todo. Create streets from the unmerged nodes.
+            node_to = {}
             new_street_nids = []
             for nid in subset_nids:
                 if nid == street1_nid:
@@ -423,10 +423,58 @@ class OSM(Network):
                     self.nodes.add(new_node.id, new_node)
                     new_street_nids.append(new_node.id)
                     # node.latlng.lat, node.latlng.lng = new_position
+            node_to[subset_nids[0]] = new_street_nids[0]
+            node_to[subset_nids[-1]] = new_street_nids[-1]
+
             merged_street = Street(None, new_street_nids)
+            merged_street.distance_to_sidewalk *= 2
             self.ways.add(merged_street.id, merged_street)
             streets_to_remove.append(street_pair[0].id)
             streets_to_remove.append(street_pair[1].id)
+
+            # Create streets from the unmerged nodes.
+            # Todo. Clean this up...
+            if subset_nids[0] in streets[pair[0]].nids:
+                street1_idx = streets[pair[0]].nids.index(subset_nids[0])
+                street2_idx = streets[pair[1]].nids.index(subset_nids[1])
+            else:
+                street1_idx = streets[pair[0]].nids.index(subset_nids[1])
+                street2_idx = streets[pair[1]].nids.index(subset_nids[0])
+
+            if subset_nids[-1] in streets[pair[0]].nids:
+                street1_end_idx = streets[pair[0]].nids.index(subset_nids[-1])
+                street2_end_idx = streets[pair[1]].nids.index(subset_nids[-2])
+            else:
+                street1_end_idx = streets[pair[0]].nids.index(subset_nids[-2])
+                street2_end_idx = streets[pair[1]].nids.index(subset_nids[-1])
+
+            street1_nid = streets[pair[0]].nids[street1_idx]
+            street2_nid = streets[pair[1]].nids[street2_idx]
+            street1_end_nid = streets[pair[0]].nids[street1_end_idx]
+            street2_end_nid = streets[pair[1]].nids[street2_end_idx]
+
+            if not streets[pair[0]].nids.index(street1_nid) == 0:
+                new_street_nids = streets[pair[0]].nids[0:streets[pair[0]].nids.index(street1_nid) + 1]
+                new_street_nids[-1] = merged_street.nids[0]
+                new_street = Street(None, new_street_nids)
+                self.ways.add(new_street.id, new_street)
+            if not len(streets[pair[0]].nids) - 1 == streets[pair[0]].nids.index(street1_end_nid):
+                new_street_nids = streets[pair[0]].nids[streets[pair[0]].nids.index(street1_end_nid) + 1:]
+                new_street_nids[0] = merged_street.nids[-1]
+                new_street = Street(None, new_street_nids)
+                self.ways.add(new_street.id, new_street)
+
+            if not streets[pair[1]].nids.index(street2_nid) == 0:
+                new_street_nids = streets[pair[1]].nids[0:streets[pair[1]].nids.index(street2_nid) + 1]
+                new_street_nids[-1] = merged_street.nids[0]
+                new_street = Street(None, new_street_nids)
+                self.ways.add(new_street.id, new_street)
+            if not len(streets[pair[1]].nids) - 1 == streets[pair[1]].nids.index(street2_end_nid):
+                new_street_nids = streets[pair[1]].nids[streets[pair[1]].nids.index(street2_end_nid) + 1:]
+                new_street_nids[0] = merged_street.nids[-1]
+                new_street = Street(None, new_street_nids)
+                self.ways.add(new_street.id, new_street)
+
 
         for street_id in streets_to_remove:
             self.ways.remove(street_id)
