@@ -13,7 +13,7 @@ class Network(object):
         self.nodes = nodes
         self.ways = ways
 
-        self.bounds = [100000.0, 100000.0, -1.0, -1.0]  # min lat, min lng, max lat, and max lng
+        self.bounds = [100000.0, 100000.0, -100000.0, -100000.0]  # min lat, min lng, max lat, and max lng
 
         # Initialize the bounding box
         for node in self.nodes.get_list():
@@ -48,17 +48,18 @@ class Network(object):
         return adj_nodes
 
     def parse_intersections(self):
-        parse_intersections(self.nodes, self.ways)
+        node_list = self.nodes.get_list()
+        intersection_node_ids = [node.id for node in node_list if node.is_intersection()]
+        self.ways.set_intersection_node_ids(intersection_node_ids)
         return
 
 class OSM(Network):
 
-    def __init__(self, nodes, ways):
+    def __init__(self, nodes, ways, bounds):
         # self.nodes = nodes
         # self.ways = ways
         super(OSM, self).__init__(nodes, ways)
-
-        # self.bounds = [100000.0, 100000.0, -1.0, -1.0]  # min lat, min lng, max lat, and max lng
+        self.bounds = bounds
 
     def preprocess(self):
         # Preprocess and clean up the data
@@ -245,6 +246,7 @@ class OSM(Network):
 
         streets = self.ways.get_list()
         street_polygons = []
+        streets_to_remove = []
         distance_to_sidewalk = 0.0003
 
         for street in streets:
@@ -280,7 +282,6 @@ class OSM(Network):
         # Merge parallel pairs
         for pair in parallel_pairs:
             street_pair = (streets[pair[0]], streets[pair[1]])
-
             shared_nids = set(street_pair[0].nids) & set(street_pair[1].nids)
 
             # Find the adjacent nodes for the shared node
@@ -328,12 +329,6 @@ class OSM(Network):
             all_nodes = [self.nodes.get(nid) for nid in street_pair[0].nids] + [self.nodes.get(nid) for nid in street_pair[1].nids]
             all_nodes = sorted(all_nodes, cmp=cmp_with_projection)
             all_nids = [node.id for node in all_nodes]
-
-            # for node in all_nodes:
-            #     print node.latlng
-            # return
-
-            # print all_nids
 
             # Condition in list comprehension
             # http://stackoverflow.com/questions/4260280/python-if-else-in-list-comprehension
@@ -383,6 +378,9 @@ class OSM(Network):
             distance = LS_street1.distance(LS_street2) / 2
 
             # Merge streets
+
+            # Todo. Create streets from the unmerged nodes.
+            new_street_nids = []
             for nid in subset_nids:
                 if nid == street1_nid:
                     # print "Street 1"
@@ -420,11 +418,19 @@ class OSM(Network):
                     else:
                         normal = np.array([- v[1], v[0]])
                     new_position = node.latlng.location(radian=False) + normal * distance
-                    node.latlng.lat, node.latlng.lng = new_position
 
-                # print node.latlng
+                    new_node = Node(None, LatLng(new_position[0], new_position[1]))
+                    self.nodes.add(new_node.id, new_node)
+                    new_street_nids.append(new_node.id)
+                    # node.latlng.lat, node.latlng.lng = new_position
+            merged_street = Street(None, new_street_nids)
+            self.ways.add(merged_street.id, merged_street)
+            streets_to_remove.append(street_pair[0].id)
+            streets_to_remove.append(street_pair[1].id)
+
+        for street_id in streets_to_remove:
+            self.ways.remove(street_id)
         return
-
 
     def split_streets(self):
         """
@@ -483,6 +489,10 @@ def parse(filename):
 
         nodes_tree = tree.findall(".//node")
         ways_tree = tree.findall(".//way")
+        bounds_elem = tree.find(".//bounds")
+        bounds = [bounds_elem.get("minlat"), bounds_elem.get("minlon"), bounds_elem.get("maxlat"), bounds_elem.get("maxlon")]
+
+        # <bounds minlat="38.8958400" minlon="-76.9811500" maxlat="38.8969600" maxlon="-76.9796600"/>
 
     street_nodes = Nodes()
     for node in nodes_tree:
@@ -491,7 +501,7 @@ def parse(filename):
 
     # Parse ways and find streets that has the following tags
     streets = Streets()
-    valid_highways = set(['primary', 'secondary', 'tertiary', 'residential'])
+    valid_highways = {'primary', 'secondary', 'tertiary', 'residential'}
     for way in ways_tree:
         highway_tag = way.find(".//tag[@k='highway']")
         if highway_tag is not None and highway_tag.get("v") in valid_highways:
@@ -514,7 +524,7 @@ def parse(filename):
             # if street_nodes.get(nid).is_intersection() and nid not in streets.intersection_node_ids:
             #     streets.intersection_node_ids.append(nid)
 
-    return street_nodes, streets
+    return street_nodes, streets, bounds
 
 
 def parse_intersections(nodes, ways):
@@ -526,8 +536,8 @@ def parse_intersections(nodes, ways):
 if __name__ == "__main__":
     # filename = "../resources/SegmentedStreet_01.osm"
     filename = "../resources/ParallelLanes_01.osm"
-    nodes, ways = parse(filename)
-    street_network = OSM(nodes, ways)
+    nodes, ways, bounds = parse(filename)
+    street_network = OSM(nodes, ways, bounds)
     street_network.preprocess()
     street_network.parse_intersections()
 

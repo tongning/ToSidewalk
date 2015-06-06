@@ -295,7 +295,7 @@ def make_crosswalks(street_network, sidewalk_network):
 
 def main(street_network):
     sidewalk_nodes, sidewalks = make_sidewalks(street_network)
-    sidewalk_network = OSM(sidewalk_nodes, sidewalks)
+    sidewalk_network = OSM(sidewalk_nodes, sidewalks, street_network.bounds)
     make_crosswalks(street_network, sidewalk_network)
 
     output = sidewalk_network.export(format='geojson')
@@ -308,8 +308,8 @@ if __name__ == "__main__":
     # filename = "../resources/Simple4WayIntersection_01.osm"
     # filename = "../resources/SmallMap_01.osm"
     filename = "../resources/ParallelLanes_01.osm"
-    nodes, ways = parse(filename)
-    street_network = OSM(nodes, ways)
+    nodes, ways, bounds = parse(filename)
+    street_network = OSM(nodes, ways, bounds)
     street_network.preprocess()
     street_network.parse_intersections()
 
