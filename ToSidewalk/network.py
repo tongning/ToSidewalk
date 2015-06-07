@@ -6,7 +6,7 @@ import math
 from latlng import LatLng
 from nodes import Node, Nodes
 from ways import Street, Streets
-from utilities import window
+from utilities import window, area
 
 
 class Network(object):
@@ -478,7 +478,7 @@ class OSM(Network):
             merged_street = Street(None, new_street_nids)
             merged_street.distance_to_sidewalk *= 2
             self.ways.add(merged_street.id, merged_street)
-            self.simplify(merged_street)
+            self.simplify(merged_street.id, 0.1)
             streets_to_remove.append(street_pair[0].id)
             streets_to_remove.append(street_pair[1].id)
 
@@ -504,10 +504,73 @@ class OSM(Network):
             self.ways.remove(street_id)
         return
 
-    def simplify(self, street):
-        """https://pypi.python.org/pypi/rdp"""
-        simplify(self, street.id)
+    def simplify(self, way_id, threshold=0.5):
+        """
+        Need a line simplification. Visvalingam?
+
+        http://bost.ocks.org/mike/simplify/
+        https://hydra.hull.ac.uk/assets/hull:8343/content
+        """
+        nodes = [self.nodes.get(nid) for nid in self.ways.get(way_id).get_node_ids()]
+        latlngs = [node.latlng.location(radian=False) for node in nodes]
+        groups = list(window(range(len(latlngs)), 3))
+
+        # Python heap
+        # http://stackoverflow.com/questions/12749622/creating-a-heap-in-python
+        # http://stackoverflow.com/questions/3954530/how-to-make-heapq-evaluate-the-heap-off-of-a-specific-attribute
+        class triangle(object):
+            def __init__(self, prev_idx, idx, next_idx):
+                self.idx = idx
+                self.prev_idx = idx - 1
+                self.next_idx = idx + 1
+                self.area = area(latlngs[self.prev_idx], latlngs[self.idx], latlngs[self.next_idx])
+
+            def update_area(self):
+                self.area = area(latlngs[self.prev_idx], latlngs[self.idx], latlngs[self.next_idx])
+
+            def __cmp__(self, other):
+                if self.area < other.area:
+                    return -1
+                elif self.area == other.area:
+                    return 0
+                else:
+                    return 1
+
+            def _str__(self):
+                return str(self.idx) + " area=" + str(self.area)
+
+        from heapq import heappush, heappop, heapify
+        dict = {}
+        heap = []
+        for i, group in enumerate(groups):
+            t = triangle(group[0], group[1], group[2])
+            dict[group[1]] = t
+            heappush(heap, t)
+
+
+        while float(len(heap) + 2) / len(latlngs) > threshold:
+            try:
+                t = heappop(heap)
+                if (t.idx + 1) in dict:
+                    dict[t.idx + 1].prev_idx = t.prev_idx
+                    dict[t.idx + 1].update_area()
+                if (t.idx - 1) in dict:
+                    dict[t.idx - 1].next_idx = t.next_idx
+                    dict[t.idx - 1].update_area()
+                heapify(heap)
+            except IndexError:
+                break
+
+        l = [t.idx for t in heap]
+        l.sort()
+        new_nids = [nodes[0].id]
+        for idx in l:
+            new_nids.append(nodes[idx].id)
+        new_nids.append(nodes[-1].id)
+        self.ways.get(way_id).nids = new_nids
+
         return
+
 
     def split_streets(self):
         """
@@ -610,14 +673,6 @@ def parse_intersections(nodes, ways):
     ways.set_intersection_node_ids(intersection_node_ids)
     return
 
-def simplify(network, way_id, epsilon=0.0001):
-    from rdp import rdp
-    way = network.ways.get(way_id)
-    nodes = [network.nodes.get(nid) for nid in way.nids]
-    latlngs = [node.latlng.location(radian=False) for node in nodes]
-    print latlngs
-    print rdp(latlngs, epsilon=epsilon)
-    return
 
 if __name__ == "__main__":
     # filename = "../resources/SegmentedStreet_01.osm"

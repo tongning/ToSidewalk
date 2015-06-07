@@ -21,6 +21,7 @@ class Way(object):
         else:
             return list(set(self.nids) & set(other.get_node_ids()))
 
+
 class Ways(object):
     def __init__(self):
         self.ways = {}

@@ -1,5 +1,18 @@
 from itertools import islice
+import numpy as np
 
+def area(p1, p2, p3):
+    """
+    Given 3 points (x1, y1), (x2, y2), (x3, y3), return the area.
+    :param p1:
+    :param p2:
+    :param p3:
+    :return:
+    """
+    v1 = np.array(p1) - np.array(p2)
+    v2 = np.array(p3) - np.array(p2)
+    area = np.cross(v1, v2) / 2
+    return abs(area)
 
 def window(seq, n=2, padding=None):
     """
