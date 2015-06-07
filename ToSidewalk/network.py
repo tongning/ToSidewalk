@@ -6,6 +6,7 @@ import math
 from latlng import LatLng
 from nodes import Node, Nodes
 from ways import Street, Streets
+from utilities import window
 
 
 class Network(object):
@@ -59,19 +60,21 @@ class OSM(Network):
         # self.nodes = nodes
         # self.ways = ways
         super(OSM, self).__init__(nodes, ways)
-        self.bounds = bounds
+        if bounds:
+            self.bounds = bounds
 
     def preprocess(self):
         # Preprocess and clean up the data
-
         self.split_streets()
+
+        parallel_segments = self.find_parallel_street_segments()
+        self.merge_parallel_street_segments(parallel_segments)
+
         self.update_ways()
         self.merge_nodes()
         # Clean up and so I can make a sidewalk network
         self.clean_up_nodes()
         self.clean_street_segmentation()
-
-        self.merge_parallel_street_segments()
 
         # Remove ways that have only a single node.
         for way in self.ways.get_list():
@@ -236,14 +239,11 @@ class OSM(Network):
 
         return
 
-    def merge_parallel_street_segments(self):
+    def find_parallel_street_segments(self):
         """
-        Todo: This method needs to be optimized using some spatial data structure (e.g., r*-tree) and other metadata..
-        Todo. And I should break this function into find_parallel_street_segments and merge_parallel_street_segments.
-        # Expand streets into rectangles, then find intersections between them.
-        # http://gis.stackexchange.com/questions/90055/how-to-find-if-two-polygons-intersect-in-python
+        This method finds parallel segments and returns a list of pair of way ids
+        :return: A list of pair of parallel way ids
         """
-
         streets = self.ways.get_list()
         street_polygons = []
         streets_to_remove = []
@@ -279,7 +279,7 @@ class OSM(Network):
 
                 parallel_pairs.append((street_polygons.index(pair[0]), street_polygons.index(pair[1])))
 
-        # Merge parallel pairs
+        filtered_parallel_pairs = []
         for pair in parallel_pairs:
             street_pair = (streets[pair[0]], streets[pair[1]])
             shared_nids = set(street_pair[0].nids) & set(street_pair[1].nids)
@@ -308,71 +308,116 @@ class OSM(Network):
                 if abs(angle_to_node2 - angle_to_node1) > 90:
                     # Paths are connected but they are not parallel lines
                     continue
+            filtered_parallel_pairs.append(pair)
 
-            # First find parts of the streets that you want to merge (you don't want to merge entire streets
-            # because, for example, one could be much longer than the other.
+        ret = []
+        for pair in filtered_parallel_pairs:
+            ret.append((streets[pair[0]].id, streets[pair[1]].id))
 
-            # Take the first two points of street_pair[0], and use it as a base vector.
-            # Project all the points along the base vector and sort them.
-            base_node0 = self.nodes.get(street_pair[0].nids[0])
-            base_node1 = self.nodes.get(street_pair[0].nids[-1])
-            base_vector = base_node0.vector_to(base_node1, normalize=True)
+        return ret
 
-            def cmp_with_projection(n1, n2):
-                dot_product1 = np.dot(n1.vector(), base_vector)
-                dot_product2 = np.dot(n2.vector(), base_vector)
-                if dot_product1 < dot_product2:
-                    return -1
-                elif dot_product2 < dot_product1:
-                    return 1
-                else:
-                    return 0
-            all_nodes = [self.nodes.get(nid) for nid in street_pair[0].nids] + [self.nodes.get(nid) for nid in street_pair[1].nids]
-            all_nodes = sorted(all_nodes, cmp=cmp_with_projection)
-            all_nids = [node.id for node in all_nodes]
+    def segment_parallel_streets(self, street_pair):
+        # First find parts of the street pairs that you want to merge (you don't want to merge entire streets
+        # because, for example, one could be much longer than the other and it doesn't make sense to merge
 
-            # Condition in list comprehension
-            # http://stackoverflow.com/questions/4260280/python-if-else-in-list-comprehension
-            all_nids_street_indices = [0 if nid in street_pair[0].nids else 1 for nid in all_nids]
-            from utilities import window
-            all_nids_street_switch = [idx_pair[0] != idx_pair[1] for idx_pair in window(all_nids_street_indices, 2)]
+        # Take the two points from street_pair[0], and use it as a base vector.
+        # Project all the points along the base vector and sort them.
+        base_node0 = self.nodes.get(street_pair[0].nids[0])
+        base_node1 = self.nodes.get(street_pair[0].nids[-1])
+        base_vector = base_node0.vector_to(base_node1, normalize=True)
 
-            # Find the first occurence of an element in a list
-            # http://stackoverflow.com/questions/9868653/find-first-list-item-that-matches-criteria
-            begin_idx = all_nids_street_switch.index(next(x for x in all_nids_street_switch if x == True))
-
-            # Find the last occurence of an element in a list
-            # http://stackoverflow.com/questions/6890170/how-to-find-the-last-occurrence-of-an-item-in-a-python-list
-            end_idx = (len(all_nids_street_switch) - 1) - all_nids_street_switch[::-1].index(next(x for x in all_nids_street_switch if x == True))
-
-            # print all_nids_street_indices[begin_idx:end_idx + 2]
-            # print all_nids[begin_idx:end_idx + 2]
-
-            # Find the parallel part of the two segments.
-            subset_nids = all_nids[begin_idx:end_idx + 1]
-            if subset_nids[0] in streets[pair[0]].nids:
-                street1_idx = streets[pair[0]].nids.index(subset_nids[0])
-                street2_idx = streets[pair[1]].nids.index(subset_nids[1])
+        def cmp_with_projection(n1, n2):
+            dot_product1 = np.dot(n1.vector(), base_vector)
+            dot_product2 = np.dot(n2.vector(), base_vector)
+            if dot_product1 < dot_product2:
+                return -1
+            elif dot_product2 < dot_product1:
+                return 1
             else:
-                street1_idx = streets[pair[0]].nids.index(subset_nids[1])
-                street2_idx = streets[pair[1]].nids.index(subset_nids[0])
+                return 0
 
-            if subset_nids[-1] in streets[pair[0]].nids:
-                street1_end_idx = streets[pair[0]].nids.index(subset_nids[-1])
-                street2_end_idx = streets[pair[1]].nids.index(subset_nids[-2])
-            else:
-                street1_end_idx = streets[pair[0]].nids.index(subset_nids[-2])
-                street2_end_idx = streets[pair[1]].nids.index(subset_nids[-1])
+        all_nodes = [self.nodes.get(nid) for nid in street_pair[0].nids] + [self.nodes.get(nid) for nid in street_pair[1].nids]
+        all_nodes = sorted(all_nodes, cmp=cmp_with_projection)
+        all_nids = [node.id for node in all_nodes]
+
+        # Condition in list comprehension
+        # http://stackoverflow.com/questions/4260280/python-if-else-in-list-comprehension
+        all_nids_street_indices = [0 if nid in street_pair[0].nids else 1 for nid in all_nids]
+        all_nids_street_switch = [idx_pair[0] != idx_pair[1] for idx_pair in window(all_nids_street_indices, 2)]
+
+        # Find the first occurence of an element in a list
+        # http://stackoverflow.com/questions/9868653/find-first-list-item-that-matches-criteria
+        begin_idx = all_nids_street_switch.index(next(x for x in all_nids_street_switch if x == True))
+
+        # Find the last occurence of an element in a list
+        # http://stackoverflow.com/questions/6890170/how-to-find-the-last-occurrence-of-an-item-in-a-python-list
+        end_idx = (len(all_nids_street_switch) - 1) - all_nids_street_switch[::-1].index(next(x for x in all_nids_street_switch if x == True))
+
+        overlapping_segment = all_nids[begin_idx:end_idx]
+
+        begin_nid = all_nids[begin_idx]
+        if begin_nid in street_pair[0].nids:
+            street1_begin_nid = begin_nid
+            street2_begin_nid = all_nids[begin_idx + 1]
+        else:
+            street1_begin_nid = all_nids[begin_idx + 1]
+            street2_begin_nid = begin_nid
+        street1_begin_idx = street_pair[0].nids.index(street1_begin_nid)
+        street2_begin_idx = street_pair[1].nids.index(street2_begin_nid)
+
+        end_nid = all_nids[end_idx]
+        if end_nid in street_pair[0].nids:
+            street1_end_nid = end_nid
+            street2_end_nid = all_nids[end_idx + 1]
+        else:
+            street1_end_nid = all_nids[end_idx + 1]
+            street2_end_nid = end_nid
+        street1_end_idx = street_pair[0].nids.index(street1_end_nid)
+        street2_end_idx = street_pair[1].nids.index(street2_end_nid)
+
+        street1_segmentation = [street_pair[0].nids[:street1_begin_idx],
+                                street_pair[0].nids[street1_begin_idx:street1_end_idx + 1],
+                                street_pair[0].nids[street1_end_idx + 1:]]
+        street2_segmentation = [street_pair[1].nids[:street2_begin_idx],
+                                street_pair[1].nids[street2_begin_idx:street2_end_idx + 1],
+                                street_pair[1].nids[street2_end_idx + 1:]]
+
+        if street1_segmentation[0]:
+            street1_segmentation[0].append(street1_segmentation[1][0])
+        if street1_segmentation[2]:
+            street1_segmentation[2].insert(0, street1_segmentation[1][-1])
+
+        if street2_segmentation[0]:
+            street2_segmentation[0].append(street2_segmentation[1][0])
+        if street2_segmentation[2]:
+            street2_segmentation[2].insert(0, street2_segmentation[1][-1])
+
+        return overlapping_segment, street1_segmentation, street2_segmentation
+
+    def merge_parallel_street_segments(self, parallel_pairs):
+        """
+        :param parallel_pairs: pairs of street_ids.
+        Todo: This method needs to be optimized using some spatial data structure (e.g., r*-tree) and other metadata..
+        Todo. And I should break this function into find_parallel_street_segments and merge_parallel_street_segments.
+        # Expand streets into rectangles, then find intersections between them.
+        # http://gis.stackexchange.com/questions/90055/how-to-find-if-two-polygons-intersect-in-python
+        """
+        streets = self.ways.get_list()
+        streets_to_remove = []
+
+        # Merge parallel pairs
+        for pair in parallel_pairs:
+            street_pair = (self.ways.get(pair[0]), self.ways.get(pair[1]))
+
+            # First find parts of the street pairs that you want to merge (you don't want to merge entire streets
+            # because, for example, one could be much longer than the other and it doesn't make sense to merge
+            subset_nids, street1_segment, street2_segment = self.segment_parallel_streets((street_pair[0], street_pair[1]))
 
             # Get two parallel segments and the distance between them
-            street1_nid = streets[pair[0]].nids[street1_idx]
-            street2_nid = streets[pair[1]].nids[street2_idx]
-            street1_end_nid = streets[pair[0]].nids[street1_end_idx]
-            street2_end_nid = streets[pair[1]].nids[street2_end_idx]
-            street1_node = self.nodes.get(street1_nid)
-            street2_node = self.nodes.get(street2_nid)
-            street1_end_node = self.nodes.get(street1_end_nid)
-            street2_end_node = self.nodes.get(street2_end_nid)
+            street1_node = self.nodes.get(street1_segment[1][0])
+            street2_node = self.nodes.get(street2_segment[1][0])
+            street1_end_node = self.nodes.get(street1_segment[1][-1])
+            street2_end_node = self.nodes.get(street2_segment[1][-1])
 
             LS_street1 = LineString((street1_node.latlng.location(radian=False), street1_end_node.latlng.location(radian=False)))
             LS_street2 = LineString((street2_node.latlng.location(radian=False), street2_end_node.latlng.location(radian=False)))
@@ -381,35 +426,31 @@ class OSM(Network):
             # Merge streets
             node_to = {}
             new_street_nids = []
+            street1_idx = 0
+            street2_idx = 0
+            street1_nid = street1_segment[1][0]
+            street2_nid = street2_segment[1][0]
             for nid in subset_nids:
-                if nid == street1_nid:
-                    # print "Street 1"
-                    street1_idx += 1
-                    street1_nid = streets[pair[0]].nids[street1_idx]
+                try:
+                    if nid == street1_nid:
+                        # print "Street 1"
+                        street1_idx += 1
+                        street1_nid = street1_segment[1][street1_idx]
 
-                    node = self.nodes.get(nid)
-                    opposite_node_1 = self.nodes.get(street2_nid)
-                    opposite_node_2_nid = streets[pair[1]].nids[street2_idx + 1]
-                    opposite_node_2 = self.nodes.get(opposite_node_2_nid)
+                        node = self.nodes.get(nid)
+                        opposite_node_1 = self.nodes.get(street2_nid)
+                        opposite_node_2_nid = street2_segment[1][street2_idx + 1]
+                        opposite_node_2 = self.nodes.get(opposite_node_2_nid)
 
-                    v = opposite_node_1.vector_to(opposite_node_2, normalize=True)
-                    v2 = opposite_node_1.vector_to(node, normalize=True)
-                    if np.cross(v, v2) > 0:
-                        normal = np.array([v[1], v[0]])
                     else:
-                        normal = np.array([- v[1], v[0]])
-                    new_position = node.latlng.location(radian=False) + normal * distance
-                    node.latlng.lat, node.latlng.lng = new_position
+                        # print "Street 2"
+                        street2_idx += 1
+                        street2_nid = self.ways.get(pair[1]).nids[street2_idx]
 
-                else:
-                    # print "Street 2"
-                    street2_idx += 1
-                    street2_nid = streets[pair[1]].nids[street2_idx]
-
-                    node = self.nodes.get(nid)
-                    opposite_node_1 = self.nodes.get(street1_nid)
-                    opposite_node_2_nid = streets[pair[0]].nids[street1_idx + 1]
-                    opposite_node_2 = self.nodes.get(opposite_node_2_nid)
+                        node = self.nodes.get(nid)
+                        opposite_node_1 = self.nodes.get(street1_nid)
+                        opposite_node_2_nid = street1_segment[1][street1_idx + 1]
+                        opposite_node_2 = self.nodes.get(opposite_node_2_nid)
 
                     v = opposite_node_1.vector_to(opposite_node_2, normalize=True)
                     v2 = opposite_node_1.vector_to(node, normalize=True)
@@ -422,62 +463,50 @@ class OSM(Network):
                     new_node = Node(None, LatLng(new_position[0], new_position[1]))
                     self.nodes.add(new_node.id, new_node)
                     new_street_nids.append(new_node.id)
-                    # node.latlng.lat, node.latlng.lng = new_position
+                except IndexError:
+                    # Take care of the last node.
+                    # Use the previous perpendicular vector but reverse the direction
+                    node = self.nodes.get(nid)
+                    new_position = node.latlng.location(radian=False) - normal * distance
+                    new_node = Node(None, LatLng(new_position[0], new_position[1]))
+                    self.nodes.add(new_node.id, new_node)
+                    new_street_nids.append(new_node.id)
+
             node_to[subset_nids[0]] = new_street_nids[0]
             node_to[subset_nids[-1]] = new_street_nids[-1]
 
             merged_street = Street(None, new_street_nids)
             merged_street.distance_to_sidewalk *= 2
             self.ways.add(merged_street.id, merged_street)
+            self.simplify(merged_street)
             streets_to_remove.append(street_pair[0].id)
             streets_to_remove.append(street_pair[1].id)
 
             # Create streets from the unmerged nodes.
-            # Todo. Clean this up...
-            if subset_nids[0] in streets[pair[0]].nids:
-                street1_idx = streets[pair[0]].nids.index(subset_nids[0])
-                street2_idx = streets[pair[1]].nids.index(subset_nids[1])
-            else:
-                street1_idx = streets[pair[0]].nids.index(subset_nids[1])
-                street2_idx = streets[pair[1]].nids.index(subset_nids[0])
-
-            if subset_nids[-1] in streets[pair[0]].nids:
-                street1_end_idx = streets[pair[0]].nids.index(subset_nids[-1])
-                street2_end_idx = streets[pair[1]].nids.index(subset_nids[-2])
-            else:
-                street1_end_idx = streets[pair[0]].nids.index(subset_nids[-2])
-                street2_end_idx = streets[pair[1]].nids.index(subset_nids[-1])
-
-            street1_nid = streets[pair[0]].nids[street1_idx]
-            street2_nid = streets[pair[1]].nids[street2_idx]
-            street1_end_nid = streets[pair[0]].nids[street1_end_idx]
-            street2_end_nid = streets[pair[1]].nids[street2_end_idx]
-
-            if not streets[pair[0]].nids.index(street1_nid) == 0:
-                new_street_nids = streets[pair[0]].nids[0:streets[pair[0]].nids.index(street1_nid) + 1]
-                new_street_nids[-1] = merged_street.nids[0]
-                new_street = Street(None, new_street_nids)
-                self.ways.add(new_street.id, new_street)
-            if not len(streets[pair[0]].nids) - 1 == streets[pair[0]].nids.index(street1_end_nid):
-                new_street_nids = streets[pair[0]].nids[streets[pair[0]].nids.index(street1_end_nid) + 1:]
-                new_street_nids[0] = merged_street.nids[-1]
-                new_street = Street(None, new_street_nids)
-                self.ways.add(new_street.id, new_street)
-
-            if not streets[pair[1]].nids.index(street2_nid) == 0:
-                new_street_nids = streets[pair[1]].nids[0:streets[pair[1]].nids.index(street2_nid) + 1]
-                new_street_nids[-1] = merged_street.nids[0]
-                new_street = Street(None, new_street_nids)
-                self.ways.add(new_street.id, new_street)
-            if not len(streets[pair[1]].nids) - 1 == streets[pair[1]].nids.index(street2_end_nid):
-                new_street_nids = streets[pair[1]].nids[streets[pair[1]].nids.index(street2_end_nid) + 1:]
-                new_street_nids[0] = merged_street.nids[-1]
-                new_street = Street(None, new_street_nids)
-                self.ways.add(new_street.id, new_street)
-
+            if street1_segment[0]:
+                street1_segment[0][-1] = node_to[street1_segment[0][-1]]
+                s = Street(None, street1_segment[0])
+                self.ways.add(s.id, s)
+            if street1_segment[2]:
+                street1_segment[2][0] = node_to[subset_nids[-1]]
+                s = Street(None, street1_segment[2])
+                self.ways.add(s.id, s)
+            if street2_segment[0]:
+                street2_segment[0][-1] = node_to[street2_segment[0][-1]]
+                s = Street(None, street2_segment[0])
+                self.ways.add(s.id, s)
+            if street2_segment[2]:
+                street2_segment[2][0] = node_to[subset_nids[-1]]
+                s = Street(None, street2_segment[2])
+                self.ways.add(s.id, s)
 
         for street_id in streets_to_remove:
             self.ways.remove(street_id)
+        return
+
+    def simplify(self, street):
+        """https://pypi.python.org/pypi/rdp"""
+        simplify(self, street.id)
         return
 
     def split_streets(self):
@@ -579,6 +608,15 @@ def parse_intersections(nodes, ways):
     node_list = nodes.get_list()
     intersection_node_ids = [node.id for node in node_list if node.is_intersection()]
     ways.set_intersection_node_ids(intersection_node_ids)
+    return
+
+def simplify(network, way_id, epsilon=0.0001):
+    from rdp import rdp
+    way = network.ways.get(way_id)
+    nodes = [network.nodes.get(nid) for nid in way.nids]
+    latlngs = [node.latlng.location(radian=False) for node in nodes]
+    print latlngs
+    print rdp(latlngs, epsilon=epsilon)
     return
 
 if __name__ == "__main__":
