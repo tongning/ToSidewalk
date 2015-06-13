@@ -65,11 +65,11 @@ class OSM(Network):
 
     def preprocess(self):
         # Preprocess and clean up the data
+
+
+        # parallel_segments = self.find_parallel_street_segments()
+        # self.merge_parallel_street_segments(parallel_segments)
         self.split_streets()
-
-        parallel_segments = self.find_parallel_street_segments()
-        self.merge_parallel_street_segments(parallel_segments)
-
         self.update_ways()
         self.merge_nodes()
         # Clean up and so I can make a sidewalk network
@@ -570,7 +570,6 @@ class OSM(Network):
         self.ways.get(way_id).nids = new_nids
 
         return
-
 
     def split_streets(self):
         """

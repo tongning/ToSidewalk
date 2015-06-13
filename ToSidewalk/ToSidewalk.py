@@ -85,20 +85,27 @@ def make_sidewalks(street_network):
 
         # Keep track of parent-child relationship between streets and sidewalks.
         # And set nodes' adjacency information
-        sidewalk_1 = Sidewalk(None, [node.id for node in sidewalk_1_nodes], "footway")
-        sidewalk_2 = Sidewalk(None, [node.id for node in sidewalk_2_nodes], "footway")
+        sidewalk_1_nids = [node.id for node in sidewalk_1_nodes]
+        sidewalk_2_nids = [node.id for node in sidewalk_2_nodes]
+        sidewalk_1 = Sidewalk(None, sidewalk_1_nids, "footway")
+        sidewalk_2 = Sidewalk(None, sidewalk_2_nids, "footway")
         sidewalk_1.set_street_id(street.id)
         sidewalk_2.set_street_id(street.id)
         street.append_sidewalk_id(sidewalk_1.id)
         street.append_sidewalk_id(sidewalk_2.id)
 
-        for nid in sidewalk_1.nids:
-            curr_node = sidewalk_nodes.get(nid)
-            curr_node.append_way(sidewalk_1.id)
+        for node in sidewalk_1_nodes:
+            node.append_way(sidewalk_1.id)
 
-        for nid in sidewalk_2.nids:
-            curr_node = sidewalk_nodes.get(nid)
-            curr_node.append_way(sidewalk_2.id)
+        for node in sidewalk_2_nodes:
+            node.append_way(sidewalk_2.id)
+        #for nid in sidewalk_1.nids:
+        #    curr_node = sidewalk_nodes.get(nid)
+        #    curr_node.append_way(sidewalk_1.id)
+
+        # for nid in sidewalk_2.nids:
+        #     curr_node = sidewalk_nodes.get(nid)
+        #     curr_node.append_way(sidewalk_2.id)
 
         # Add sidewalks to sidewalk_ways
         sidewalks.add(sidewalk_1.id, sidewalk_1)
@@ -189,16 +196,16 @@ def connect_crosswalk_nodes(sidewalk_network, crosswalk):
         # Get the intersection node and two nodes that created the intersection sidewalk node
         crosswalk_node = sidewalk_nodes.get(crosswalk_node_id)
         intersection_node, adjacent_street_node1, adjacent_street_node2 = crosswalk_node.parents
-        v_crosswalk_node = intersection_node.vector_to(crosswalk_node, normalize=True)  # A vector to the intersection sidewalk node
+        # v_crosswalk_node = intersection_node.vector_to(crosswalk_node, normalize=True)  # A vector to the intersection sidewalk node
 
-        # Connect sidewalk nodes created from each street node n1 and n2
+        # Connect sidewalk nodes created from adjacent_street_node1 and adjacent_street_node2
         # Get sidewalk nodes that are created from the street node, and
         # identify which one should be connected to crosswalk_node
         for adjacent_street_node in [adjacent_street_node1, adjacent_street_node2]:
             # Create a vector from an intersection node to an adjacent street node
             v_adjacent_street_node = intersection_node.vector_to(adjacent_street_node, normalize=True)
 
-            # Todo: Issue 7
+            # Todo: Issue #7
             way_ids = crosswalk_node.get_way_ids()
             if len(set(way_ids)) == 1:
                 # The intersection sidewalk node was created from a dummy node and one
@@ -208,38 +215,27 @@ def connect_crosswalk_nodes(sidewalk_network, crosswalk):
 
                 if shared_street_id not in adjacent_street_node.way_ids:
                     adjacent_street_node = adjacent_street_node2
+                    shared_street_id = intersection_node.get_shared_way_ids(adjacent_street_node)[0]
             else:
                 shared_street_id = intersection_node.get_shared_way_ids(adjacent_street_node)[0]
 
-            sidewalk_node_1_from_adj, sidewalk_node_2_from_adj = adjacent_street_node.sidewalk_nodes[shared_street_id]
-            v_adjacent_street_node_s1 = intersection_node.vector_to(sidewalk_node_1_from_adj, normalize=True)
-            v_adjacent_street_node_s2 = intersection_node.vector_to(sidewalk_node_2_from_adj, normalize=True)
+            sidewalk_node_1_from_intersection, sidewalk_node_2_from_intersection = intersection_node.get_sidewalk_nodes(shared_street_id)
+
+            v_sidewalk_node_1_from_intersection = intersection_node.vector_to(sidewalk_node_1_from_intersection, normalize=True)
 
             # Check which one of n1_s1 and n1_s2 are on the same side of the road with crosswalk_node
             # If the rotation (cross product) from v_n1 to v_crosswalk_node is same as v_n1 to v_n1_s1, then
             # n1_s1 should be on the same side. Otherwise, n1_s1 should be on the same side with crosswalk_node.
-            # if np.cross(v_adjacent_street_node, v_crosswalk_node) * np.cross(v_adjacent_street_node, v_adjacent_street_node_s1) > 0:
-            #     sidewalk_node_from_adj = sidewalk_node_1_from_adj
-            # else:
-            #     sidewalk_node_from_adj = sidewalk_node_2_from_adj
-
-            # Identify on which sidewalk adjacent_street_node_sidewalk_temp belongs too.
-            sidewalk_id_1 = sidewalk_node_1_from_adj.get_way_ids()[0]
-            sidewalk_1 = sidewalks.get(sidewalk_id_1)
-            sidewalk_id_2 = sidewalk_node_2_from_adj.get_way_ids()[0]
-            sidewalk_2 = sidewalks.get(sidewalk_id_2)
-
-            # Swap the sidewalk intersection_sidewalk_node with crosswalk_node
-            potential_nodes_to_swap = [n.id for n in intersection_node.get_sidewalk_nodes(shared_street_id)]
-            intersection_sidewalk_node_ids = sidewalk_1.get_shared_node_ids(potential_nodes_to_swap) # s_to_swap)
-            if len(intersection_sidewalk_node_ids) != 0:
-                intersection_sidewalk_node_id = intersection_sidewalk_node_ids[0]
-                sidewalk_1.swap_nodes(intersection_sidewalk_node_id, crosswalk_node.id)
+            v_crosswalk_node = intersection_node.vector_to(crosswalk_node, normalize=True)
+            if np.cross(v_adjacent_street_node, v_crosswalk_node) * np.cross(v_adjacent_street_node, v_sidewalk_node_1_from_intersection) > 0:
+                node_to_swap = sidewalk_node_1_from_intersection
             else:
-                intersection_sidewalk_node_ids = sidewalk_2.get_shared_node_ids(potential_nodes_to_swap)
-                intersection_sidewalk_node_id = intersection_sidewalk_node_ids[0]
-                sidewalk_2.swap_nodes(intersection_sidewalk_node_id, crosswalk_node.id)
-            sidewalk_nodes.remove(intersection_sidewalk_node_id)
+                node_to_swap = sidewalk_node_2_from_intersection
+
+            sidewalk_id = node_to_swap.get_way_ids()[0]
+            sidewalk = sidewalks.get(sidewalk_id)
+            sidewalk.swap_nodes(node_to_swap.id, crosswalk_node.id)
+            sidewalk_nodes.remove(node_to_swap.id)
 
             if len(set(crosswalk_node.get_way_ids())) == 1:
                 break
@@ -289,8 +285,10 @@ def make_crosswalks(street_network, sidewalk_network):
         sidewalks.add(crosswalk.id, crosswalk)
 
         # Connect the crosswalk nodes with correct sidewalk nodes
-        sidewalk_nodes, sidewalks = connect_crosswalk_nodes(sidewalk_network, crosswalk)
-    return sidewalk_nodes, sidewalks
+        # sidewalk_nodes, sidewalks = connect_crosswalk_nodes(sidewalk_network, crosswalk)
+        connect_crosswalk_nodes(sidewalk_network, crosswalk)
+    # return sidewalk_nodes, sidewalks
+    return
 
 
 def main(street_network):
@@ -305,9 +303,9 @@ def main(street_network):
 if __name__ == "__main__":
     # filename = "../resources/SimpleWay_01.osm"
 
-    # filename = "../resources/Simple4WayIntersection_01.osm"
-    # filename = "../resources/SmallMap_01.osm"
-    filename = "../resources/ParallelLanes_01.osm"
+    #filename = "../resources/Simple4WayIntersection_01.osm"
+    filename = "../resources/SmallMap_01.osm"
+    # filename = "../resources/ParallelLanes_01.osm"
     nodes, ways, bounds = parse(filename)
     street_network = OSM(nodes, ways, bounds)
     street_network.preprocess()
