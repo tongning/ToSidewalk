@@ -1,24 +1,24 @@
 import unittest
 from ToSidewalk.nodes import *
 from ToSidewalk.latlng import *
+from ToSidewalk.ways import *
+from ToSidewalk.network import *
 
 class TestNodeMethods(unittest.TestCase):
     def test_constructor(self):
         """
         Test the constructor
         """
-        node = Node()
+        node = Node(None, 0, 0)
         self.assertNotEqual(str(0), node.id)
 
-        node = Node(0)
+        node = Node(0, 0, 0)
         self.assertEqual(str(0), node.id)
 
         lat, lng = 38.898556, -77.037852
-        latlng = LatLng(lat, lng)
-        node = Node(None, latlng=latlng)
-        self.assertEqual(latlng, node.latlng)
-        self.assertEqual(latlng.lat, lat)
-        self.assertEqual(latlng.lng, lng)
+        node = Node(None, lat, lng)
+        self.assertEqual(node.lat, lat)
+        self.assertEqual(node.lng, lng)
 
     def test_angle_to(self):
         """
@@ -28,14 +28,10 @@ class TestNodeMethods(unittest.TestCase):
         lat2, lng2 = 1, 1
         lat3, lng3 = 1, 0
         lat4, lng4 = 0, -1
-        latlng1 = LatLng(lat1, lng1)
-        latlng2 = LatLng(lat2, lng2)
-        latlng3 = LatLng(lat3, lng3)
-        latlng4 = LatLng(lat4, lng4)
-        node1 = Node(None, latlng1)
-        node2 = Node(None, latlng2)
-        node3 = Node(None, latlng3)
-        node4 = Node(None, latlng4)
+        node1 = Node(None, lat1, lng1)
+        node2 = Node(None, lat2, lng2)
+        node3 = Node(None, lat3, lng3)
+        node4 = Node(None, lat4, lng4)
         self.assertEqual(45.0, math.degrees(node1.angle_to(node2)))
         self.assertEqual(90.0, math.degrees(node1.angle_to(node3)))
         self.assertEqual(180.0, math.degrees(node1.angle_to(node4)))
@@ -43,14 +39,28 @@ class TestNodeMethods(unittest.TestCase):
         lat1, lng1 = 38.988152, -76.941595
         lat2, lng2 = 38.988927, -76.940528
         lat3, lng3 = 38.989269, -76.941408
-        latlng1 = LatLng(lat1, lng1)
-        latlng2 = LatLng(lat2, lng2)
-        latlng3 = LatLng(lat3, lng3)
-        node1 = Node(None, latlng1)
-        node2 = Node(None, latlng2)
-        node3 = Node(None, latlng3)
+        node1 = Node(None, lat1, lng1)
+        node2 = Node(None, lat2, lng2)
+        node3 = Node(None, lat3, lng3)
         self.assertAlmostEqual(35.992236322, math.degrees(node1.angle_to(node2)))
         self.assertAlmostEqual(80.4960928229, math.degrees(node1.angle_to(node3)))
+
+    def test_belongs_to(self):
+        node = Node(None, 0, 0)
+        nodes = Nodes()
+        nodes.add(node)
+        self.assertEqual(node.belongs_to(), nodes)
+
+class TestNodesMethods(unittest.TestCase):
+    def test_belongs_to(self):
+        """
+        Test the constructor
+        """
+        ways = Ways()
+        nodes = Nodes()
+        network = Network(nodes, ways)
+        self.assertEqual(nodes.belongs_to(), network)
+
 
 if __name__ == '__main__':
     unittest.main()

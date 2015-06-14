@@ -16,17 +16,13 @@ def make_sidewalk_nodes(street, prev_node, curr_node, next_node):
     if prev_node is None:
         v = - curr_node.vector_to(next_node, normalize=False)
         vec_prev = curr_node.vector() + v
-        latlng = LatLng(vec_prev[0], vec_prev[1])
-        # latlng = LatLng(math.degrees(vec_prev[0]), math.degrees(vec_prev[1]))
-        prev_node = Node(None, latlng)
+        prev_node = Node(None, vec_prev[0], vec_prev[1])
     elif next_node is None:
         v = - curr_node.vector_to(prev_node, normalize=False)
         vec_next = curr_node.vector() + v
-        latlng = LatLng(vec_next[0], vec_next[1])
-        # latlng = LatLng(math.degrees(vec_next[0]), math.degrees(vec_next[1]))
-        next_node = Node(None, latlng)
+        next_node = Node(None, vec_next[0], vec_next[1])
 
-    curr_latlng = np.array(curr_node.latlng.location())
+    curr_latlng = np.array(curr_node.location())
 
     v_cp_n = curr_node.vector_to(prev_node, normalize=True)
     v_cn_n = curr_node.vector_to(next_node, normalize=True)
@@ -39,11 +35,9 @@ def make_sidewalk_nodes(street, prev_node, curr_node, next_node):
 
     p1 = curr_latlng + street.distance_to_sidewalk * v_sidewalk_n
     p2 = curr_latlng - street.distance_to_sidewalk * v_sidewalk_n
-    latlng1 = LatLng(math.degrees(p1[0]), math.degrees(p1[1]))
-    latlng2 = LatLng(math.degrees(p2[0]), math.degrees(p2[1]))
 
-    p_sidewalk_1 = Node(None, latlng1)
-    p_sidewalk_2 = Node(None, latlng2)
+    p_sidewalk_1 = Node(None, math.degrees(p1[0]), math.degrees(p1[1]))
+    p_sidewalk_2 = Node(None, math.degrees(p2[0]), math.degrees(p2[1]))
 
     curr_node.append_sidewalk_node(street.id, p_sidewalk_1)
     curr_node.append_sidewalk_node(street.id, p_sidewalk_2)
@@ -75,8 +69,8 @@ def make_sidewalks(street_network):
             n1, n2 = make_sidewalk_nodes(street, prev_node, curr_node, next_node)
             # log.debug(n1)
 
-            sidewalk_nodes.add(n1.id, n1)
-            sidewalk_nodes.add(n2.id, n2)
+            sidewalk_nodes.add(n1)
+            sidewalk_nodes.add(n2)
 
             sidewalk_1_nodes.append(n1)
             sidewalk_2_nodes.append(n2)
@@ -108,8 +102,8 @@ def make_sidewalks(street_network):
         #     curr_node.append_way(sidewalk_2.id)
 
         # Add sidewalks to sidewalk_ways
-        sidewalks.add(sidewalk_1.id, sidewalk_1)
-        sidewalks.add(sidewalk_2.id, sidewalk_2)
+        sidewalks.add(sidewalk_1)
+        sidewalks.add(sidewalk_2)
     return sidewalk_nodes, sidewalks
 
 
@@ -146,8 +140,7 @@ def make_crosswalk_node(node, n1, n2):
     v = v1 + v2
     v /= np.linalg.norm(v)  # Normalize the vector
     v_new = v_curr + v * node.crosswalk_distance
-    latlng_new = LatLng(v_new[0], v_new[1])
-    return Node(None, latlng_new)
+    return Node(None, v_new[0], v_new[1])
 
 
 def make_crosswalk_nodes(intersection_node, adj_street_nodes):

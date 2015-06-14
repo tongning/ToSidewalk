@@ -11,6 +11,8 @@ from utilities import window, area
 
 class Network(object):
     def __init__(self, nodes, ways):
+        ways.parent_network = self
+        nodes.parent_network = self
         self.nodes = nodes
         self.ways = ways
 
@@ -18,15 +20,15 @@ class Network(object):
 
         # Initialize the bounding box
         for node in self.nodes.get_list():
-            lat, lng = node.latlng.location(radian=False)
-            if lat < self.bounds[0]:
-                self.bounds[0] = lat
-            elif lat > self.bounds[2]:
-                self.bounds[2] = lat
-            if lng < self.bounds[1]:
-                self.bounds[1] = lng
-            elif lng > self.bounds[3]:
-                self.bounds[3] = lng
+            # lat, lng = node.latlng.location(radian=False)
+            if node.lat < self.bounds[0]:
+                self.bounds[0] = node.lat
+            elif node.lat > self.bounds[2]:
+                self.bounds[2] = node.lat
+            if node.lng < self.bounds[1]:
+                self.bounds[1] = node.lng
+            elif node.lng > self.bounds[3]:
+                self.bounds[3] = node.lng
 
     def get_adjacent_nodes(self, node):
         """
@@ -65,7 +67,6 @@ class OSM(Network):
 
     def preprocess(self):
         # Preprocess and clean up the data
-
 
         # parallel_segments = self.find_parallel_street_segments()
         # self.merge_parallel_street_segments(parallel_segments)
@@ -419,8 +420,8 @@ class OSM(Network):
             street1_end_node = self.nodes.get(street1_segment[1][-1])
             street2_end_node = self.nodes.get(street2_segment[1][-1])
 
-            LS_street1 = LineString((street1_node.latlng.location(radian=False), street1_end_node.latlng.location(radian=False)))
-            LS_street2 = LineString((street2_node.latlng.location(radian=False), street2_end_node.latlng.location(radian=False)))
+            LS_street1 = LineString((street1_node.location(), street1_end_node.location()))
+            LS_street2 = LineString((street2_node.location(), street2_end_node.location()))
             distance = LS_street1.distance(LS_street2) / 2
 
             # Merge streets
@@ -458,18 +459,18 @@ class OSM(Network):
                         normal = np.array([v[1], v[0]])
                     else:
                         normal = np.array([- v[1], v[0]])
-                    new_position = node.latlng.location(radian=False) + normal * distance
+                    new_position = node.location() + normal * distance
 
-                    new_node = Node(None, LatLng(new_position[0], new_position[1]))
-                    self.nodes.add(new_node.id, new_node)
+                    new_node = Node(None, new_position[0], new_position[1])
+                    self.nodes.add(new_node)
                     new_street_nids.append(new_node.id)
                 except IndexError:
                     # Take care of the last node.
                     # Use the previous perpendicular vector but reverse the direction
                     node = self.nodes.get(nid)
-                    new_position = node.latlng.location(radian=False) - normal * distance
-                    new_node = Node(None, LatLng(new_position[0], new_position[1]))
-                    self.nodes.add(new_node.id, new_node)
+                    new_position = node.location() - normal * distance
+                    new_node = Node(None, new_position[0], new_position[1])
+                    self.nodes.add(new_node)
                     new_street_nids.append(new_node.id)
 
             node_to[subset_nids[0]] = new_street_nids[0]
@@ -477,7 +478,7 @@ class OSM(Network):
 
             merged_street = Street(None, new_street_nids)
             merged_street.distance_to_sidewalk *= 2
-            self.ways.add(merged_street.id, merged_street)
+            self.ways.add(merged_street)
             self.simplify(merged_street.id, 0.1)
             streets_to_remove.append(street_pair[0].id)
             streets_to_remove.append(street_pair[1].id)
@@ -512,7 +513,7 @@ class OSM(Network):
         https://hydra.hull.ac.uk/assets/hull:8343/content
         """
         nodes = [self.nodes.get(nid) for nid in self.ways.get(way_id).get_node_ids()]
-        latlngs = [node.latlng.location(radian=False) for node in nodes]
+        latlngs = [node.location() for node in nodes]
         groups = list(window(range(len(latlngs)), 3))
 
         # Python heap

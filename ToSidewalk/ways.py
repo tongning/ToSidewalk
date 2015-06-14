@@ -7,7 +7,14 @@ class Way(object):
         self.nids = nids
         self.type = type
         self.user = 'test'
-        return
+        self.parent_ways = None
+
+    def belongs_to(self):
+        return self.parent_ways
+
+    def export(self):
+        if self.parent_ways:
+            pass
 
     def get_node_ids(self):
         return self.nids
@@ -26,9 +33,17 @@ class Ways(object):
     def __init__(self):
         self.ways = {}
         self.intersection_node_ids = []
+        self.parent_network = None
 
-    def add(self, wid, way):
-        self.ways[wid] = way
+    def __eq__(self, other):
+        return id(self) == id(other)
+
+    def add(self, way):
+        way.parent_ways = self
+        self.ways[way.id] = way
+
+    def belongs_to(self):
+        return self.parent_network
 
     def get(self, wid):
         return self.ways[wid]

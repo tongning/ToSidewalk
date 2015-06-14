@@ -3,9 +3,10 @@ import numpy as np
 import math
 import logging as log
 
-class Node(object):
-    def __init__(self, nid=None, latlng=None):
-        self.latlng = latlng  # Note: Would it be cleaner to inherit LatLng?
+class Node(LatLng):
+    def __init__(self, nid=None, lat=None, lng=None):
+        # self.latlng = latlng  # Note: Would it be cleaner to inherit LatLng?
+        super(Node, self).__init__(lat, lng)
 
         if nid is None:
             self.id = str(id(self))
@@ -17,14 +18,15 @@ class Node(object):
         self.min_intersection_cardinality = 2
         self.crosswalk_distance = 0.00008
         self.parents = ()
+        self.parent_nodes = None
         return
 
     def __str__(self):
-        return "Node object, id: " + str(self.id) + ", latlng: " + str(self.latlng.location(radian=False))
+        return "Node object, id: " + str(self.id) + ", latlng: " + str(self.location())
 
     def angle_to(self, node):
-        y_node, x_node = node.latlng.location(radian=True)
-        y_self, x_self = self.latlng.location(radian=True)
+        y_node, x_node = node.location()
+        y_self, x_self = self.location()
         return math.atan2(y_node - y_self, x_node - x_self)
 
     def append_sidewalk_node(self, way_id, node):
@@ -32,6 +34,9 @@ class Node(object):
 
     def append_way(self, wid):
         self.way_ids.append(wid)
+
+    def belongs_to(self):
+        return self.parent_nodes
 
     def distance_to(self, node):
         return self.latlng.distance_to(node.latlng)
@@ -63,10 +68,10 @@ class Node(object):
         return
 
     def vector(self):
-        return np.array(self.latlng.location(radian=False))
+        return np.array(self.location())
 
     def vector_to(self, node, normalize=False):
-        vec = np.array(node.latlng.location(radian=False)) - np.array(self.latlng.location(radian=False))
+        vec = np.array(node.location()) - np.array(self.location())
         if normalize:
             vec /= np.linalg.norm(vec)
         return vec
@@ -76,11 +81,16 @@ class Nodes(object):
     def __init__(self):
         self.nodes = {}
         self.crosswalk_node_ids = []
+        self.parent_network = None
         return
 
-    def add(self, nid, node):
-        self.nodes[nid] = node
+    def add(self, node):
+        node.parent_nodes = self
+        self.nodes[node.id] = node
         return
+
+    def belongs_to(self):
+        return self.parent_network
 
     def get(self, nid):
         if nid in self.nodes:
