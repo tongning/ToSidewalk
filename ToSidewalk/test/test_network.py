@@ -4,7 +4,7 @@ from ToSidewalk.nodes import *
 from ToSidewalk.ways import *
 
 
-class TestNodeMethods(unittest.TestCase):
+class TestNetworkMethods(unittest.TestCase):
     def test_segment_parallel_streets(self):
         """
         Test segment parallel streets
@@ -144,6 +144,16 @@ class TestNodeMethods(unittest.TestCase):
 
         network = OSM(nodes, streets, None)
         network.simplify(street1.id)
+
+    def test_parse(self):
+        filename = "../../resources/SmallMap_01.osm"
+        nodes, ways, bounds = parse(filename)
+
+    def test_split_streets(self):
+        filename = "../../resources/SmallMap_01.osm"
+        nodes, ways, bounds = parse(filename)
+        street_network = OSM(nodes, ways, bounds)
+        street_network.preprocess()
 
 if __name__ == '__main__':
     unittest.main()

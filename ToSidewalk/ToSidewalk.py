@@ -262,8 +262,7 @@ def make_crosswalks(street_network, sidewalk_network):
             vec_idx = (idx + 1) % 3
             dummy_vector = - vectors[vec_idx] * dummy_street.distance_to_sidewalk
             dummy_coordinate_vector = v_curr + dummy_vector
-            dummy_latlng = LatLng(dummy_coordinate_vector[0], dummy_coordinate_vector[1])
-            dummy_node = Node(None, dummy_latlng)
+            dummy_node = Node(None, dummy_coordinate_vector[0], dummy_coordinate_vector[1])
             adj_street_nodes.insert(idx, dummy_node)
 
         # Create crosswalk nodes and add a cross walk to the data structure
@@ -272,10 +271,10 @@ def make_crosswalks(street_network, sidewalk_network):
         crosswalk_node_ids.append(crosswalk_node_ids[0])
         crosswalk = Sidewalk(None, crosswalk_node_ids, "crosswalk")
         for crosswalk_node in crosswalk_nodes:
-            sidewalk_nodes.add(crosswalk_node.id, crosswalk_node)
+            sidewalk_nodes.add(crosswalk_node)
             sidewalk_nodes.crosswalk_node_ids.append(crosswalk_node.id)
 
-        sidewalks.add(crosswalk.id, crosswalk)
+        sidewalks.add(crosswalk)
 
         # Connect the crosswalk nodes with correct sidewalk nodes
         # sidewalk_nodes, sidewalks = connect_crosswalk_nodes(sidewalk_network, crosswalk)

@@ -97,7 +97,7 @@ class OSM(Network):
 
         new_nodes = Nodes()
         for nid in nids:
-            new_nodes.add(nid, self.nodes.get(nid))
+            new_nodes.add(self.nodes.get(nid))
 
         self.nodes = new_nodes
         return
@@ -587,22 +587,22 @@ class OSM(Network):
                 # street, or (ii) there are only two nodes and both of them are on the edge of the street.
                 # Otherwise split the street!
                 if len(intersection_indices) == 1 and (intersection_indices[0] == 0 or intersection_indices[0] == len(way.nids) - 1):
-                    new_streets.add(way.id, way)
+                    new_streets.add(way)
                 elif len(intersection_indices) == 2 and (intersection_indices[0] == 0 and intersection_indices[1] == len(way.nids) - 1):
-                    new_streets.add(way.id, way)
+                    new_streets.add(way)
                 elif len(intersection_indices) == 2 and (intersection_indices[1] == 0 and intersection_indices[0] == len(way.nids) - 1):
-                    new_streets.add(way.id, way)
+                    new_streets.add(way)
                 else:
                     prev_idx = 0
                     for idx in intersection_indices:
                         if idx != 0 and idx != len(way.nids):
                             new_nids = way.nids[prev_idx:idx + 1]
                             new_way = Street(None, new_nids, way.type)
-                            new_streets.add(new_way.id, new_way)
+                            new_streets.add(new_way)
                             prev_idx = idx
                     new_nids = way.nids[prev_idx:]
                     new_way = Street(None, new_nids, way.type)
-                    new_streets.add(new_way.id, new_way)
+                    new_streets.add(new_way)
         self.ways = new_streets
 
         return
@@ -636,8 +636,8 @@ def parse(filename):
 
     street_nodes = Nodes()
     for node in nodes_tree:
-        mynode = Node(node.get("id"), LatLng(node.get("lat"), node.get("lon")))
-        street_nodes.add(node.get("id"), mynode)
+        mynode = Node(node.get("id"), node.get("lat"), node.get("lon"))
+        street_nodes.add(mynode)
 
     # Parse ways and find streets that has the following tags
     streets = Streets()
@@ -649,11 +649,11 @@ def parse(filename):
             nids = [node.get("ref") for node in node_elements]
 
             # Sort the nodes by longitude.
-            if street_nodes.get(nids[0]).latlng.lng > street_nodes.get(nids[-1]).latlng.lng:
+            if street_nodes.get(nids[0]).lng > street_nodes.get(nids[-1]).lng:
                 nids = nids[::-1]
 
             street = Street(way.get("id"), nids)
-            streets.add(way.get("id"), street)
+            streets.add(street)
 
     # Find intersections and store adjacency information
     for street in streets.get_list():

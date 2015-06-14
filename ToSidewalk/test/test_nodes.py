@@ -51,6 +51,28 @@ class TestNodeMethods(unittest.TestCase):
         nodes.add(node)
         self.assertEqual(node.belongs_to(), nodes)
 
+    def test_vector(self):
+        node1 = Node(None, 0, 0)
+        v = node1.vector()
+        self.assertEqual(v[0], 0)
+        self.assertEqual(v[1], 0)
+
+    def test_vector_to(self):
+        node1 = Node(None, 0, 0)
+        node2 = Node(None, 1, 1)
+        v = node1.vector_to(node2)
+        self.assertEqual(v[0], 1.)
+        self.assertEqual(v[1], 1.)
+
+        v = node1.vector_to(node2, normalize=True)
+        self.assertEqual(v[0], 1 / math.sqrt(2))
+        self.assertEqual(v[1], 1 / math.sqrt(2))
+
+        node3 = Node(None, 1, 1)
+        v = node2.vector_to(node3)
+        self.assertEqual(v[0], 0)
+        self.assertEqual(v[1], 0)
+
 class TestNodesMethods(unittest.TestCase):
     def test_belongs_to(self):
         """

@@ -47,7 +47,6 @@ class TestToSidewalkMethods(unittest.TestCase):
         self.assertEqual(rlat, node.lat)
         self.assertEqual(rlng, node.lng)
 
-    def test_create_crosswalk_nodes(self):
         clat, clng = 0, 0
         lat1, lng1 = 0, 1
         lat2, lng2 = 1, 0
@@ -72,7 +71,17 @@ class TestToSidewalkMethods(unittest.TestCase):
             adjacent_nodes = [node1, node2, node3, node4]
             make_crosswalk_nodes(cnode, adjacent_nodes)
         except ValueError:
-            self.fail("create_crosswalk_nodes() failed unexpectedly")
+            self.fail("make_crosswalk_nodes() failed unexpectedly")
+
+    def test_make_crosswalks(self):
+        filename = "../../resources/SmallMap_01.osm"
+        nodes, ways, bounds = parse(filename)
+        street_network = OSM(nodes, ways, bounds)
+        street_network.preprocess()
+        street_network.parse_intersections()
+        sidewalk_nodes, sidewalks = make_sidewalks(street_network)
+        sidewalk_network = OSM(sidewalk_nodes, sidewalks, street_network.bounds)
+        make_crosswalks(street_network, sidewalk_network)
 
     def test_connect_crosswalk_nodes(self):
         node_0 = Node(0, 0, 0)
@@ -135,9 +144,7 @@ class TestToSidewalkMethods(unittest.TestCase):
         crosswalk = Sidewalk('c', ('c1', 'c2', 'c3', 'c4', 'c1'))
         sidewalks.add(crosswalk)
 
-        # print sidewalk_network.export(format='geojson')
         connect_crosswalk_nodes(sidewalk_network, crosswalk)
-        #print sidewalk_network.export(format='geojson')
 
         for street in streets.get_list():
             # Sidewalks should not cross

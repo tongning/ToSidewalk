@@ -38,8 +38,7 @@ class Node(LatLng):
     def belongs_to(self):
         return self.parent_nodes
 
-    def distance_to(self, node):
-        return self.latlng.distance_to(node.latlng)
+
 
     def is_intersection(self):
         return len(self.way_ids) >= self.min_intersection_cardinality
@@ -72,7 +71,7 @@ class Node(LatLng):
 
     def vector_to(self, node, normalize=False):
         vec = np.array(node.location()) - np.array(self.location())
-        if normalize:
+        if normalize and np.linalg.norm(vec) != 0:
             vec /= np.linalg.norm(vec)
         return vec
 
