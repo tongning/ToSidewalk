@@ -4,7 +4,6 @@ class LatLng(object):
     def __init__(self, lat, lng, node_id=None):
         self.lat = float(lat)
         self.lng = float(lng)
-        self.node_id = node_id
         return
 
     def __eq__(self, other):
@@ -13,11 +12,8 @@ class LatLng(object):
     def distance_to(self, latlng):
         return haversine(radians(self.lng), radians(self.lat), radians(latlng.lng), radians(latlng.lat))
 
-    def location(self, radian=True):
-        if radian:
-            return (radians(self.lat), radians(self.lng))
-        else:
-            return (self.lat, self.lng)
+    def location(self):
+        return (self.lat, self.lng)
 
     def __str__(self):
         return str(self.lat) + "," + str(self.lng)

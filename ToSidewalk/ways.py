@@ -7,7 +7,14 @@ class Way(object):
         self.nids = nids
         self.type = type
         self.user = 'test'
-        return
+        self.parent_ways = None
+
+    def belongs_to(self):
+        return self.parent_ways
+
+    def export(self):
+        if self.parent_ways:
+            pass
 
     def get_node_ids(self):
         return self.nids
@@ -21,14 +28,29 @@ class Way(object):
         else:
             return list(set(self.nids) & set(other.get_node_ids()))
 
+    def remove_node(self, nid_to_remove):
+        # http://stackoverflow.com/questions/2793324/is-there-a-simple-way-to-delete-a-list-element-by-value-in-python
+        self.nids = [nid for nid in self.nids if nid != nid_to_remove]
+
+    def swap_nodes(self, nid_from, nid_to):
+        index_from = self.nids.index(nid_from)
+        self.nids[index_from] = nid_to
 
 class Ways(object):
     def __init__(self):
         self.ways = {}
         self.intersection_node_ids = []
+        self.parent_network = None
 
-    def add(self, wid, way):
-        self.ways[wid] = way
+    def __eq__(self, other):
+        return id(self) == id(other)
+
+    def add(self, way):
+        way.parent_ways = self
+        self.ways[way.id] = way
+
+    def belongs_to(self):
+        return self.parent_network
 
     def get(self, wid):
         return self.ways[wid]
@@ -50,7 +72,7 @@ class Street(Way):
     def __init__(self, wid=None, nids=(), type=None):
         super(Street, self).__init__(wid, nids, type)
         self.sidewalk_ids = []  # Keep track of which sidewalks were generated from this way
-        self.distance_to_sidewalk = 0.000001
+        self.distance_to_sidewalk = 0.00004
 
     def append_sidewalk_id(self, way_id):
         self.sidewalk_ids.append(way_id)
@@ -64,17 +86,13 @@ class Streets(Ways):
         super(Streets, self).__init__()
 
 class Sidewalk(Way):
-    def __init__(self, wid=None, nids=(), type=None):
+    def __init__(self, wid=None, nids=[], type=None):
         super(Sidewalk, self).__init__(wid, nids, type)
 
     def set_street_id(self, street_id):
         """  Set the parent street id """
         self.street_id = street_id
         return
-
-    def swap_nodes(self, nid_from, nid_to):
-        index_from = self.nids.index(nid_from)
-        self.nids[index_from] = nid_to
 
 class Sidewalks(Ways):
     def __init__(self):

@@ -1,9 +1,9 @@
 from xml.etree import cElementTree as ET
 from shapely.geometry import Polygon, Point, LineString
-import numpy as np
+import json
 import math
+import numpy as np
 
-from latlng import LatLng
 from nodes import Node, Nodes
 from ways import Street, Streets
 from utilities import window, area
@@ -11,6 +11,8 @@ from utilities import window, area
 
 class Network(object):
     def __init__(self, nodes, ways):
+        ways.parent_network = self
+        nodes.parent_network = self
         self.nodes = nodes
         self.ways = ways
 
@@ -18,15 +20,51 @@ class Network(object):
 
         # Initialize the bounding box
         for node in self.nodes.get_list():
-            lat, lng = node.latlng.location(radian=False)
-            if lat < self.bounds[0]:
-                self.bounds[0] = lat
-            elif lat > self.bounds[2]:
-                self.bounds[2] = lat
-            if lng < self.bounds[1]:
-                self.bounds[1] = lng
-            elif lng > self.bounds[3]:
-                self.bounds[3] = lng
+            # lat, lng = node.latlng.location(radian=False)
+            if node.lat < self.bounds[0]:
+                self.bounds[0] = node.lat
+            elif node.lat > self.bounds[2]:
+                self.bounds[2] = node.lat
+            if node.lng < self.bounds[1]:
+                self.bounds[1] = node.lng
+            elif node.lng > self.bounds[3]:
+                self.bounds[3] = node.lng
+
+    def add_node(self, node):
+        """
+        Add a node to this network
+        :param node: A Node object to add
+        :return:
+        """
+        self.nodes.add(node)
+
+    def add_nodes(self, nodes):
+        """
+        Add a list of nodes to this network
+        :param nodes:
+        :return:
+        """
+        for node in nodes:
+            self.add_node(node)
+
+    def add_way(self, way):
+        """
+        Add a way to this network
+        :param way: A Way object to add
+        :return:
+        """
+        self.ways.add(way)
+        for nid in way.nids:
+            self.nodes.get(nid).way_ids.append(way.id)
+
+    def add_ways(self, ways):
+        """
+        Add a list of ways to this network
+        :param ways:
+        :return:
+        """
+        for way in ways:
+            self.add_way(way)
 
     def get_adjacent_nodes(self, node):
         """
@@ -54,6 +92,42 @@ class Network(object):
         self.ways.set_intersection_node_ids(intersection_node_ids)
         return
 
+    def remove_node(self, nid):
+        node = self.nodes.get(nid)
+        for way_id in node.way_ids:
+            self.ways.get(way_id).remove_node(nid)
+        self.nodes.remove(nid)
+        return
+
+    def remove_way(self, way_id):
+        """
+        Remove a way object from this network
+        :param way_id: A way id
+        :return:
+        """
+        way = self.ways.get(way_id)
+        for nid in way.get_node_ids():
+            node = self.nodes.get(nid)
+            node.remove_way_id(way_id)
+            way_ids = node.get_way_ids()
+            if len(way_ids) == 0:
+                self.nodes.remove(nid)
+        self.ways.remove(way_id)
+
+    def swap_nodes(self, nid_from, nid_to):
+        """
+        Swap the node in all the ways
+        :param nid_from:
+        :param nid_to:
+        :return:
+        """
+        node = self.nodes.get(nid_from)
+        if node and node.way_ids:
+            for way_id in node.way_ids:
+                self.ways.get(way_id).swap_nodes(nid_from, nid_to)
+            self.nodes.remove(nid_from)
+        return
+
 class OSM(Network):
 
     def __init__(self, nodes, ways, bounds):
@@ -65,11 +139,10 @@ class OSM(Network):
 
     def preprocess(self):
         # Preprocess and clean up the data
+
+        # parallel_segments = self.find_parallel_street_segments()
+        # self.merge_parallel_street_segments(parallel_segments)
         self.split_streets()
-
-        parallel_segments = self.find_parallel_street_segments()
-        self.merge_parallel_street_segments(parallel_segments)
-
         self.update_ways()
         self.merge_nodes()
         # Clean up and so I can make a sidewalk network
@@ -96,7 +169,7 @@ class OSM(Network):
 
         new_nodes = Nodes()
         for nid in nids:
-            new_nodes.add(nid, self.nodes.get(nid))
+            new_nodes.add(self.nodes.get(nid))
 
         self.nodes = new_nodes
         return
@@ -113,21 +186,20 @@ class OSM(Network):
 
                 # Given that the streets are split, node's index in each way's nids (a list of node ids) should
                 # either be 0 or else.
-                combined_nids = []
                 if way_1.nids.index(node.id) == 0 and way_2.nids.index(node.id) == 0:
                     combined_nids = way_1.nids[:0:-1] + way_2.nids
-                if way_1.nids.index(node.id) != 0 and way_2.nids.index(node.id) == 0:
+                elif way_1.nids.index(node.id) != 0 and way_2.nids.index(node.id) == 0:
                     combined_nids = way_1.nids[:-1] + way_2.nids
-                if way_1.nids.index(node.id) == 0 and way_2.nids.index(node.id) != 0:
+                elif way_1.nids.index(node.id) == 0 and way_2.nids.index(node.id) != 0:
                     combined_nids = way_2.nids[:-1] + way_1.nids
                 else:
                     combined_nids = way_1.nids + way_2.nids[1::-1]
 
                 # Create a new way from way_1 and way_2. Then remove the two ways from self.way
                 new_street = Street(None, combined_nids, "footway")
-                self.ways.add(new_street.id, new_street)
-                self.ways.remove(way_id_1)
-                self.ways.remove(way_id_2)
+                self.add_way(new_street)
+                self.remove_way(way_id_1)
+                self.remove_way(way_id_2)
 
         return
 
@@ -191,15 +263,15 @@ class OSM(Network):
 
                 coordinates = []
                 for nid in way.nids:
-                    latlng = self.nodes.get(nid).latlng
-                    coordinates.append([latlng.lng, latlng.lat])
+                    node = self.nodes.get(nid)
+                    coordinates.append([node.lng, node.lat])
                 feature['geometry'] = {
                     'type': 'LineString',
                     'coordinates': coordinates
                 }
                 geojson['features'].append(feature)
 
-            import json
+
             return json.dumps(geojson)
 
     def merge_nodes(self, distance_threshold=0.015):
@@ -419,8 +491,8 @@ class OSM(Network):
             street1_end_node = self.nodes.get(street1_segment[1][-1])
             street2_end_node = self.nodes.get(street2_segment[1][-1])
 
-            LS_street1 = LineString((street1_node.latlng.location(radian=False), street1_end_node.latlng.location(radian=False)))
-            LS_street2 = LineString((street2_node.latlng.location(radian=False), street2_end_node.latlng.location(radian=False)))
+            LS_street1 = LineString((street1_node.location(), street1_end_node.location()))
+            LS_street2 = LineString((street2_node.location(), street2_end_node.location()))
             distance = LS_street1.distance(LS_street2) / 2
 
             # Merge streets
@@ -458,18 +530,18 @@ class OSM(Network):
                         normal = np.array([v[1], v[0]])
                     else:
                         normal = np.array([- v[1], v[0]])
-                    new_position = node.latlng.location(radian=False) + normal * distance
+                    new_position = node.location() + normal * distance
 
-                    new_node = Node(None, LatLng(new_position[0], new_position[1]))
-                    self.nodes.add(new_node.id, new_node)
+                    new_node = Node(None, new_position[0], new_position[1])
+                    self.add_node(new_node)
                     new_street_nids.append(new_node.id)
                 except IndexError:
                     # Take care of the last node.
                     # Use the previous perpendicular vector but reverse the direction
                     node = self.nodes.get(nid)
-                    new_position = node.latlng.location(radian=False) - normal * distance
-                    new_node = Node(None, LatLng(new_position[0], new_position[1]))
-                    self.nodes.add(new_node.id, new_node)
+                    new_position = node.location() - normal * distance
+                    new_node = Node(None, new_position[0], new_position[1])
+                    self.add_node(new_node)
                     new_street_nids.append(new_node.id)
 
             node_to[subset_nids[0]] = new_street_nids[0]
@@ -477,7 +549,7 @@ class OSM(Network):
 
             merged_street = Street(None, new_street_nids)
             merged_street.distance_to_sidewalk *= 2
-            self.ways.add(merged_street.id, merged_street)
+            self.add_way(merged_street)
             self.simplify(merged_street.id, 0.1)
             streets_to_remove.append(street_pair[0].id)
             streets_to_remove.append(street_pair[1].id)
@@ -486,19 +558,19 @@ class OSM(Network):
             if street1_segment[0]:
                 street1_segment[0][-1] = node_to[street1_segment[0][-1]]
                 s = Street(None, street1_segment[0])
-                self.ways.add(s.id, s)
+                self.add_way(s)
             if street1_segment[2]:
                 street1_segment[2][0] = node_to[subset_nids[-1]]
                 s = Street(None, street1_segment[2])
-                self.ways.add(s.id, s)
+                self.add_way(s)
             if street2_segment[0]:
                 street2_segment[0][-1] = node_to[street2_segment[0][-1]]
                 s = Street(None, street2_segment[0])
-                self.ways.add(s.id, s)
+                self.add_way(s)
             if street2_segment[2]:
                 street2_segment[2][0] = node_to[subset_nids[-1]]
                 s = Street(None, street2_segment[2])
-                self.ways.add(s.id, s)
+                self.add_way(s)
 
         for street_id in streets_to_remove:
             self.ways.remove(street_id)
@@ -512,7 +584,7 @@ class OSM(Network):
         https://hydra.hull.ac.uk/assets/hull:8343/content
         """
         nodes = [self.nodes.get(nid) for nid in self.ways.get(way_id).get_node_ids()]
-        latlngs = [node.latlng.location(radian=False) for node in nodes]
+        latlngs = [node.location() for node in nodes]
         groups = list(window(range(len(latlngs)), 3))
 
         # Python heap
@@ -571,7 +643,6 @@ class OSM(Network):
 
         return
 
-
     def split_streets(self):
         """
         Split ways into pieces for preprocessing the OSM files.
@@ -587,22 +658,22 @@ class OSM(Network):
                 # street, or (ii) there are only two nodes and both of them are on the edge of the street.
                 # Otherwise split the street!
                 if len(intersection_indices) == 1 and (intersection_indices[0] == 0 or intersection_indices[0] == len(way.nids) - 1):
-                    new_streets.add(way.id, way)
+                    new_streets.add(way)
                 elif len(intersection_indices) == 2 and (intersection_indices[0] == 0 and intersection_indices[1] == len(way.nids) - 1):
-                    new_streets.add(way.id, way)
+                    new_streets.add(way)
                 elif len(intersection_indices) == 2 and (intersection_indices[1] == 0 and intersection_indices[0] == len(way.nids) - 1):
-                    new_streets.add(way.id, way)
+                    new_streets.add(way)
                 else:
                     prev_idx = 0
                     for idx in intersection_indices:
                         if idx != 0 and idx != len(way.nids):
                             new_nids = way.nids[prev_idx:idx + 1]
                             new_way = Street(None, new_nids, way.type)
-                            new_streets.add(new_way.id, new_way)
+                            new_streets.add(new_way)
                             prev_idx = idx
                     new_nids = way.nids[prev_idx:]
                     new_way = Street(None, new_nids, way.type)
-                    new_streets.add(new_way.id, new_way)
+                    new_streets.add(new_way)
         self.ways = new_streets
 
         return
@@ -632,15 +703,14 @@ def parse(filename):
         bounds_elem = tree.find(".//bounds")
         bounds = [bounds_elem.get("minlat"), bounds_elem.get("minlon"), bounds_elem.get("maxlat"), bounds_elem.get("maxlon")]
 
-        # <bounds minlat="38.8958400" minlon="-76.9811500" maxlat="38.8969600" maxlon="-76.9796600"/>
-
-    street_nodes = Nodes()
-    for node in nodes_tree:
-        mynode = Node(node.get("id"), LatLng(node.get("lat"), node.get("lon")))
-        street_nodes.add(node.get("id"), mynode)
-
-    # Parse ways and find streets that has the following tags
+    # Parse nodes and ways. Only read the ways that have the tags specified in valid_highways
     streets = Streets()
+    street_nodes = Nodes()
+    street_network = OSM(street_nodes, streets, bounds)
+    for node in nodes_tree:
+        mynode = Node(node.get("id"), node.get("lat"), node.get("lon"))
+        street_network.add_node(mynode)
+
     valid_highways = {'primary', 'secondary', 'tertiary', 'residential'}
     for way in ways_tree:
         highway_tag = way.find(".//tag[@k='highway']")
@@ -649,22 +719,13 @@ def parse(filename):
             nids = [node.get("ref") for node in node_elements]
 
             # Sort the nodes by longitude.
-            if street_nodes.get(nids[0]).latlng.lng > street_nodes.get(nids[-1]).latlng.lng:
+            if street_nodes.get(nids[0]).lng > street_nodes.get(nids[-1]).lng:
                 nids = nids[::-1]
 
             street = Street(way.get("id"), nids)
-            streets.add(way.get("id"), street)
+            street_network.add_way(street)
 
-    # Find intersections and store adjacency information
-    for street in streets.get_list():
-        # prev_nid = None
-        for nid in street.nids:
-            street_nodes.get(nid).append_way(street.id)
-
-            # if street_nodes.get(nid).is_intersection() and nid not in streets.intersection_node_ids:
-            #     streets.intersection_node_ids.append(nid)
-
-    return street_nodes, streets, bounds
+    return street_network
 
 
 def parse_intersections(nodes, ways):
@@ -677,8 +738,7 @@ def parse_intersections(nodes, ways):
 if __name__ == "__main__":
     # filename = "../resources/SegmentedStreet_01.osm"
     filename = "../resources/ParallelLanes_01.osm"
-    nodes, ways, bounds = parse(filename)
-    street_network = OSM(nodes, ways, bounds)
+    street_network = parse(filename)
     street_network.preprocess()
     street_network.parse_intersections()
 
