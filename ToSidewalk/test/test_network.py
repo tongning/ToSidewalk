@@ -147,12 +147,11 @@ class TestNetworkMethods(unittest.TestCase):
 
     def test_parse(self):
         filename = "../../resources/SmallMap_01.osm"
-        nodes, ways, bounds = parse(filename)
+        street_network = parse(filename)
 
     def test_split_streets(self):
         filename = "../../resources/SmallMap_01.osm"
-        nodes, ways, bounds = parse(filename)
-        street_network = OSM(nodes, ways, bounds)
+        street_network = parse(filename)
         street_network.preprocess()
 
     def test_swap_nodes(self):
