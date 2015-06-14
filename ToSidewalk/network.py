@@ -30,6 +30,14 @@ class Network(object):
             elif node.lng > self.bounds[3]:
                 self.bounds[3] = node.lng
 
+    def add_node(self, node):
+        self.nodes.add(node)
+
+    def add_way(self, way):
+        self.ways.add(way)
+        for nid in way.nids:
+            self.nodes.get(nid).way_ids.append(way.id)
+
     def get_adjacent_nodes(self, node):
         """
         Get adjacent nodes for the passed node
@@ -54,6 +62,27 @@ class Network(object):
         node_list = self.nodes.get_list()
         intersection_node_ids = [node.id for node in node_list if node.is_intersection()]
         self.ways.set_intersection_node_ids(intersection_node_ids)
+        return
+
+    def remove_node(self, nid):
+        node = self.nodes.get(nid)
+        for way_id in node.way_ids:
+            self.ways.get(way_id).remove_node(nid)
+        self.nodes.remove(nid)
+        return
+
+    def swap_nodes(self, nid_from, nid_to):
+        """
+        Swap the node in all the ways
+        :param nid_from:
+        :param nid_to:
+        :return:
+        """
+        node = self.nodes.get(nid_from)
+        if node and node.way_ids:
+            for way_id in node.way_ids:
+                self.ways.get(way_id).swap_nodes(nid_from, nid_to)
+            self.nodes.remove(nid_from)
         return
 
 class OSM(Network):

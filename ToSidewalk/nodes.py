@@ -38,8 +38,6 @@ class Node(LatLng):
     def belongs_to(self):
         return self.parent_nodes
 
-
-
     def is_intersection(self):
         return len(self.way_ids) >= self.min_intersection_cardinality
 

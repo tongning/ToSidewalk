@@ -155,6 +155,66 @@ class TestNetworkMethods(unittest.TestCase):
         street_network = OSM(nodes, ways, bounds)
         street_network.preprocess()
 
+    def test_swap_nodes(self):
+        node1 = Node(1, 1, 1)
+        node2 = Node(2, 2, 2)
+        node3 = Node(3, 3, 3)
+        nodes = Nodes()
+        ways = Ways()
+        network = Network(nodes, ways)
+        network.add_node(node1)
+        network.add_node(node2)
+        network.add_node(node3)
+
+        way1 = Way(None, [node1.id, node2.id])
+        way2 = Way(None, [node1.id, node3.id])
+        network.add_way(way1)
+        network.add_way(way2)
+
+        self.assertEqual(node1.id, way1.nids[0])
+        self.assertEqual(node1.id, way2.nids[0])
+
+        network.swap_nodes(node1.id, node3.id)
+        self.assertEqual(node3.id, way1.nids[0])
+        self.assertEqual(node3.id, way2.nids[0])
+
+    def test_remove_node(self):
+        node1 = Node(1, 1, 0)
+        node2 = Node(2, 2, -3)
+        node3 = Node(3, 2, 3)
+        node4 = Node(4, 4, -3)
+        node5 = Node(5, 4, 3)
+        node6 = Node(6, 6, 0)
+
+        nodes = Nodes()
+        ways = Ways()
+        network = Network(nodes, ways)
+        network.add_node(node1)
+        network.add_node(node2)
+        network.add_node(node3)
+        network.add_node(node4)
+        network.add_node(node5)
+        network.add_node(node6)
+
+        way1 = Way(None, [node1.id, node2.id, node4.id, node6.id])
+        way2 = Way(None, [node1.id, node3.id, node5.id, node6.id])
+        network.add_way(way1)
+        network.add_way(way2)
+
+        self.assertEqual(len(way1.nids), 4)
+        self.assertEqual(len(way2.nids), 4)
+
+        # Delete a node
+        network.remove_node(node2.id)
+        self.assertEqual(len(way1.nids), 3)
+        self.assertEqual(len(way2.nids), 4)
+
+        # When a node that is shared between ways are deleted
+        network.remove_node(node6.id)
+        self.assertEqual(len(way1.nids), 2)
+        self.assertEqual(len(way2.nids), 3)
+
+
 if __name__ == '__main__':
     unittest.main()
 

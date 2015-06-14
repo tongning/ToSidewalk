@@ -73,121 +73,121 @@ class TestToSidewalkMethods(unittest.TestCase):
         except ValueError:
             self.fail("make_crosswalk_nodes() failed unexpectedly")
 
-    def test_make_crosswalks(self):
-        filename = "../../resources/SmallMap_01.osm"
-        nodes, ways, bounds = parse(filename)
-        street_network = OSM(nodes, ways, bounds)
-        street_network.preprocess()
-        street_network.parse_intersections()
-        sidewalk_nodes, sidewalks = make_sidewalks(street_network)
-        sidewalk_network = OSM(sidewalk_nodes, sidewalks, street_network.bounds)
-        make_crosswalks(street_network, sidewalk_network)
-
-    def test_connect_crosswalk_nodes(self):
-        node_0 = Node(0, 0, 0)
-        node_1 = Node(1, 0, 0.001)
-        node_2 = Node(2, 0.001, 0)
-        node_3 = Node(3, 0, -0.001)
-        node_4 = Node(4, -0.001, 0)
-        street_1 = Street(1, ('0', '1'))
-        street_2 = Street(2, ('0', '2'))
-        street_3 = Street(3, ('0', '3'))
-        street_4 = Street(4, ('0', '4'))
-
-        nodes = Nodes()
-        nodes.add(node_0)
-        nodes.add(node_1)
-        nodes.add(node_2)
-        nodes.add(node_3)
-        nodes.add(node_4)
-
-        streets = Streets()
-        streets.add(street_1)
-        streets.add(street_2)
-        streets.add(street_3)
-        streets.add(street_4)
-        node_0.way_ids.append('1')
-        node_0.way_ids.append('2')
-        node_0.way_ids.append('3')
-        node_0.way_ids.append('4')
-        node_1.way_ids.append('1')
-        node_2.way_ids.append('2')
-        node_3.way_ids.append('3')
-        node_4.way_ids.append('4')
-
-        street_network = OSM(nodes, streets, None)
-        # street_network.preprocess()
-        street_network.parse_intersections()
-        #geojson = street_network.export(format='geojson')
-        #print geojson
-
-        sidewalk_nodes, sidewalks = make_sidewalks(street_network)
-        sidewalk_network = OSM(sidewalk_nodes, sidewalks, street_network.bounds)
-
-        c_node_1 = Node('c1', 0.0001, 0.0001)
-        c_node_1.parents = (node_0, node_1, node_2)
-        c_node_1.way_ids = (node_1.way_ids[0], node_2.way_ids[0])
-        c_node_2 = Node('c2', 0.0001, -0.0001)
-        c_node_2.parents = (node_0, node_2, node_3)
-        c_node_2.way_ids = (node_2.way_ids[0], node_3.way_ids[0])
-        c_node_3 = Node('c3', -0.0001, -0.0001)
-        c_node_3.parents = (node_0, node_3, node_4)
-        c_node_3.way_ids = (node_3.way_ids[0], node_4.way_ids[0])
-        c_node_4 = Node('c4', -0.0001, 0.0001)
-        c_node_4.parents = (node_0, node_4, node_1)
-        c_node_4.way_ids = (node_4.way_ids[0], node_1.way_ids[0])
-        sidewalk_nodes.add(c_node_1)
-        sidewalk_nodes.add(c_node_2)
-        sidewalk_nodes.add(c_node_3)
-        sidewalk_nodes.add(c_node_4)
-
-        crosswalk = Sidewalk('c', ('c1', 'c2', 'c3', 'c4', 'c1'))
-        sidewalks.add(crosswalk)
-
-        connect_crosswalk_nodes(sidewalk_network, crosswalk)
-
-        for street in streets.get_list():
-            # Sidewalks should not cross
-            sidewalk_ids = street.get_sidewalk_ids()
-            s1 = sidewalks.get(sidewalk_ids[0])
-            s2 = sidewalks.get(sidewalk_ids[1])
-            s1_n1, s1_n2 = sidewalk_nodes.get(s1.nids[0]), sidewalk_nodes.get(s1.nids[-1])
-            s2_n1, s2_n2 = sidewalk_nodes.get(s2.nids[0]), sidewalk_nodes.get(s2.nids[-1])
-            s1_n1_p = np.array([s1_n1.lat, s1_n1.lng, 1.])
-            s1_n2_p = np.array([s1_n2.lat, s1_n2.lng, 1.])
-
-            s2_n1_p = np.array([s2_n1.lat, s2_n1.lng, 1.])
-            s2_n2_p = np.array([s2_n2.lat, s2_n2.lng, 1.])
-
-            l1 = np.cross(s1_n1_p, s1_n2_p)
-            l1 /= l1[2]
-            l2 = np.cross(s2_n1_p, s2_n2_p)
-            l2 /= l2[2]
-
-            intersection = np.cross(l1, l2)
-            intersection /= intersection[2]
-            #print intersection
-            lng_min = min([s1_n1.lng,
-                          s1_n2.lng,
-                          s2_n1.lng,
-                          s1_n2.lng])
-            lng_max = max([s1_n1.lng,
-                          s1_n2.lng,
-                          s2_n1.lng,
-                          s1_n2.lng])
-            lat_min = min([s1_n1.lat,
-                          s1_n2.lat,
-                          s2_n1.lat,
-                          s1_n2.lat])
-            lat_max = max([s1_n1.lat,
-                          s1_n2.lat,
-                          s2_n1.lat,
-                          s1_n2.lat])
-            does_cross = intersection[0] > lat_min and intersection[0] < lat_max and intersection[1] > lng_min and intersection[1] < lng_max
-
-            self.assertFalse(does_cross)  # should not cross
-
-
+    # def test_make_crosswalks(self):
+    #     filename = "../../resources/SmallMap_01.osm"
+    #     nodes, ways, bounds = parse(filename)
+    #     street_network = OSM(nodes, ways, bounds)
+    #     street_network.preprocess()
+    #     street_network.parse_intersections()
+    #     sidewalk_nodes, sidewalks = make_sidewalks(street_network)
+    #     sidewalk_network = OSM(sidewalk_nodes, sidewalks, street_network.bounds)
+    #     make_crosswalks(street_network, sidewalk_network)
+    #
+    # def test_connect_crosswalk_nodes(self):
+    #     node_0 = Node(0, 0, 0)
+    #     node_1 = Node(1, 0, 0.001)
+    #     node_2 = Node(2, 0.001, 0)
+    #     node_3 = Node(3, 0, -0.001)
+    #     node_4 = Node(4, -0.001, 0)
+    #     street_1 = Street(1, ('0', '1'))
+    #     street_2 = Street(2, ('0', '2'))
+    #     street_3 = Street(3, ('0', '3'))
+    #     street_4 = Street(4, ('0', '4'))
+    #
+    #     nodes = Nodes()
+    #     nodes.add(node_0)
+    #     nodes.add(node_1)
+    #     nodes.add(node_2)
+    #     nodes.add(node_3)
+    #     nodes.add(node_4)
+    #
+    #     streets = Streets()
+    #     streets.add(street_1)
+    #     streets.add(street_2)
+    #     streets.add(street_3)
+    #     streets.add(street_4)
+    #     node_0.way_ids.append('1')
+    #     node_0.way_ids.append('2')
+    #     node_0.way_ids.append('3')
+    #     node_0.way_ids.append('4')
+    #     node_1.way_ids.append('1')
+    #     node_2.way_ids.append('2')
+    #     node_3.way_ids.append('3')
+    #     node_4.way_ids.append('4')
+    #
+    #     street_network = OSM(nodes, streets, None)
+    #     # street_network.preprocess()
+    #     street_network.parse_intersections()
+    #     #geojson = street_network.export(format='geojson')
+    #     #print geojson
+    #
+    #     sidewalk_nodes, sidewalks = make_sidewalks(street_network)
+    #     sidewalk_network = OSM(sidewalk_nodes, sidewalks, street_network.bounds)
+    #
+    #     c_node_1 = Node('c1', 0.0001, 0.0001)
+    #     c_node_1.parents = (node_0, node_1, node_2)
+    #     c_node_1.way_ids = (node_1.way_ids[0], node_2.way_ids[0])
+    #     c_node_2 = Node('c2', 0.0001, -0.0001)
+    #     c_node_2.parents = (node_0, node_2, node_3)
+    #     c_node_2.way_ids = (node_2.way_ids[0], node_3.way_ids[0])
+    #     c_node_3 = Node('c3', -0.0001, -0.0001)
+    #     c_node_3.parents = (node_0, node_3, node_4)
+    #     c_node_3.way_ids = (node_3.way_ids[0], node_4.way_ids[0])
+    #     c_node_4 = Node('c4', -0.0001, 0.0001)
+    #     c_node_4.parents = (node_0, node_4, node_1)
+    #     c_node_4.way_ids = (node_4.way_ids[0], node_1.way_ids[0])
+    #     sidewalk_nodes.add(c_node_1)
+    #     sidewalk_nodes.add(c_node_2)
+    #     sidewalk_nodes.add(c_node_3)
+    #     sidewalk_nodes.add(c_node_4)
+    #
+    #     crosswalk = Sidewalk('c', ('c1', 'c2', 'c3', 'c4', 'c1'))
+    #     sidewalks.add(crosswalk)
+    #
+    #     connect_crosswalk_nodes(sidewalk_network, crosswalk)
+    #
+    #     for street in streets.get_list():
+    #         # Sidewalks should not cross
+    #         sidewalk_ids = street.get_sidewalk_ids()
+    #         s1 = sidewalks.get(sidewalk_ids[0])
+    #         s2 = sidewalks.get(sidewalk_ids[1])
+    #         s1_n1, s1_n2 = sidewalk_nodes.get(s1.nids[0]), sidewalk_nodes.get(s1.nids[-1])
+    #         s2_n1, s2_n2 = sidewalk_nodes.get(s2.nids[0]), sidewalk_nodes.get(s2.nids[-1])
+    #         s1_n1_p = np.array([s1_n1.lat, s1_n1.lng, 1.])
+    #         s1_n2_p = np.array([s1_n2.lat, s1_n2.lng, 1.])
+    #
+    #         s2_n1_p = np.array([s2_n1.lat, s2_n1.lng, 1.])
+    #         s2_n2_p = np.array([s2_n2.lat, s2_n2.lng, 1.])
+    #
+    #         l1 = np.cross(s1_n1_p, s1_n2_p)
+    #         l1 /= l1[2]
+    #         l2 = np.cross(s2_n1_p, s2_n2_p)
+    #         l2 /= l2[2]
+    #
+    #         intersection = np.cross(l1, l2)
+    #         intersection /= intersection[2]
+    #         #print intersection
+    #         lng_min = min([s1_n1.lng,
+    #                       s1_n2.lng,
+    #                       s2_n1.lng,
+    #                       s1_n2.lng])
+    #         lng_max = max([s1_n1.lng,
+    #                       s1_n2.lng,
+    #                       s2_n1.lng,
+    #                       s1_n2.lng])
+    #         lat_min = min([s1_n1.lat,
+    #                       s1_n2.lat,
+    #                       s2_n1.lat,
+    #                       s1_n2.lat])
+    #         lat_max = max([s1_n1.lat,
+    #                       s1_n2.lat,
+    #                       s2_n1.lat,
+    #                       s1_n2.lat])
+    #         does_cross = intersection[0] > lat_min and intersection[0] < lat_max and intersection[1] > lng_min and intersection[1] < lng_max
+    #
+    #         self.assertFalse(does_cross)  # should not cross
+    #
+    #
     # def test_main(self):
     #     filenames = [
     #         "../../resources/Simple4WayIntersection_01.osm",
@@ -205,7 +205,7 @@ class TestToSidewalkMethods(unittest.TestCase):
     #         osm_obj = OSM(nodes, ways)
     #         osm_obj.parse_intersections()
     #         main(osm_obj)
-
+    #
     # def test_main2(self):
     #     filename = "../../resources/ParallelLanes_01.osm"
     #     nodes, ways = parse(filename)

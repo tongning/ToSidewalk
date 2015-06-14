@@ -28,6 +28,13 @@ class Way(object):
         else:
             return list(set(self.nids) & set(other.get_node_ids()))
 
+    def remove_node(self, nid_to_remove):
+        # http://stackoverflow.com/questions/2793324/is-there-a-simple-way-to-delete-a-list-element-by-value-in-python
+        self.nids = [nid for nid in self.nids if nid != nid_to_remove]
+
+    def swap_nodes(self, nid_from, nid_to):
+        index_from = self.nids.index(nid_from)
+        self.nids[index_from] = nid_to
 
 class Ways(object):
     def __init__(self):
@@ -87,9 +94,7 @@ class Sidewalk(Way):
         self.street_id = street_id
         return
 
-    def swap_nodes(self, nid_from, nid_to):
-        index_from = self.nids.index(nid_from)
-        self.nids[index_from] = nid_to
+
 
 class Sidewalks(Ways):
     def __init__(self):

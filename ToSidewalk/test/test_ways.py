@@ -26,6 +26,8 @@ class TestWayMethods(unittest.TestCase):
         ways.add(myway)
         self.assertEqual(myway.belongs_to(), ways)
 
+
+
 class TestWaysMethods(unittest.TestCase):
     def test_belongs_to(self):
         ways = Ways()
