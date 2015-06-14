@@ -4,7 +4,6 @@ class LatLng(object):
     def __init__(self, lat, lng, node_id=None):
         self.lat = float(lat)
         self.lng = float(lng)
-        self.node_id = node_id
         return
 
     def __eq__(self, other):

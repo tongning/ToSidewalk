@@ -214,6 +214,33 @@ class TestNetworkMethods(unittest.TestCase):
         self.assertEqual(len(way1.nids), 2)
         self.assertEqual(len(way2.nids), 3)
 
+    def test_export(self):
+        node0 = Node(0, 0, 0)
+        node1 = Node(1, 0, 1)
+        node2 = Node(2, 1, 0)
+        node3 = Node(3, 0, -1)
+        node4 = Node(4, -1, 0)
+        way1 = Way(1, (node0.id, node1.id))
+        way2 = Way(2, (node0.id, node2.id))
+        way3 = Way(3, (node0.id, node3.id))
+        way4 = Way(4, (node0.id, node4.id))
+
+        nodes = Nodes()
+        ways = Ways()
+        network = OSM(nodes, ways, None)
+        network.add_node(node0)
+        network.add_node(node1)
+        network.add_node(node2)
+        network.add_node(node3)
+        network.add_node(node4)
+        network.add_way(way1)
+        network.add_way(way2)
+        network.add_way(way3)
+        network.add_way(way4)
+        mygeojson = network.export()
+        string = """{"type": "FeatureCollection", "features": [{"geometry": {"type": "LineString", "coordinates": [[0.0, 0.0], [1.0, 0.0]]}, "type": "Feature", "properties": {"stroke": "#555555", "type": null, "id": "1", "user": "test"}, "id": "way/1"}, {"geometry": {"type": "LineString", "coordinates": [[0.0, 0.0], [-1.0, 0.0]]}, "type": "Feature", "properties": {"stroke": "#555555", "type": null, "id": "3", "user": "test"}, "id": "way/3"}, {"geometry": {"type": "LineString", "coordinates": [[0.0, 0.0], [0.0, 1.0]]}, "type": "Feature", "properties": {"stroke": "#555555", "type": null, "id": "2", "user": "test"}, "id": "way/2"}, {"geometry": {"type": "LineString", "coordinates": [[0.0, 0.0], [0.0, -1.0]]}, "type": "Feature", "properties": {"stroke": "#555555", "type": null, "id": "4", "user": "test"}, "id": "way/4"}]}"""
+        self.assertEqual(mygeojson, string)
+
 
 if __name__ == '__main__':
     unittest.main()
