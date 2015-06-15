@@ -11,10 +11,11 @@ from utilities import window, area
 
 class Network(object):
     def __init__(self, nodes, ways):
-        ways.parent_network = self
-        nodes.parent_network = self
         self.nodes = nodes
         self.ways = ways
+
+        self.ways.parent_network = self
+        self.nodes.parent_network = self
 
         self.bounds = [100000.0, 100000.0, -100000.0, -100000.0]  # min lat, min lng, max lat, and max lng
 
@@ -134,45 +135,46 @@ class OSM(Network):
         # self.nodes = nodes
         # self.ways = ways
         super(OSM, self).__init__(nodes, ways)
+
         if bounds:
             self.bounds = bounds
 
     def preprocess(self):
-        # Preprocess and clean up the data
+        """
+        Preprocess and clean up the data
+        :return:
+        """
 
-        # parallel_segments = self.find_parallel_street_segments()
-        # self.merge_parallel_street_segments(parallel_segments)
+        parallel_segments = self.find_parallel_street_segments()
+        self.merge_parallel_street_segments(parallel_segments)
         self.split_streets()
         self.update_ways()
         self.merge_nodes()
         # Clean up and so I can make a sidewalk network
-        self.clean_up_nodes()
+        # self.clean_up_nodes()
         self.clean_street_segmentation()
 
         # Remove ways that have only a single node.
         for way in self.ways.get_list():
             if len(way.nids) < 2:
-                for nid in way.get_node_ids():
-                    n = self.nodes.get(nid)
-                    n.remove_way_id(way.id)
-                self.ways.remove(way.id)
+                self.remove_way(way.id)
         return
 
-    def clean_up_nodes(self):
-        """
-        Remove unnecessary nodess
-        """
-        nids = []
-        for way in self.ways.get_list():
-            nids.extend(way.nids)
-        nids = set(nids)
-
-        new_nodes = Nodes()
-        for nid in nids:
-            new_nodes.add(self.nodes.get(nid))
-
-        self.nodes = new_nodes
-        return
+    # def clean_up_nodes(self):
+    #     """
+    #     Remove unnecessary nodes
+    #     """
+    #     nids = []
+    #     for way in self.ways.get_list():
+    #         nids.extend(way.nids)
+    #     nids = set(nids)
+    #
+    #     new_nodes = Nodes()
+    #     for nid in nids:
+    #         new_nodes.add(self.nodes.get(nid))
+    #
+    #     self.nodes = new_nodes
+    #     return
 
     def clean_street_segmentation(self):
         """
@@ -260,7 +262,6 @@ class OSM(Network):
                 feature['type'] = 'Feature'
                 feature['id'] = 'way/%s' % (way.id)
 
-
                 coordinates = []
                 for nid in way.nids:
                     node = self.nodes.get(nid)
@@ -270,7 +271,6 @@ class OSM(Network):
                     'coordinates': coordinates
                 }
                 geojson['features'].append(feature)
-
 
             return json.dumps(geojson)
 
@@ -293,7 +293,7 @@ class OSM(Network):
                 target = self.nodes.get(nid)
                 distance = start.distance_to(target)
                 if distance < distance_threshold:
-                    street.nids.remove(nid)
+                    self.remove_node(nid)
                 else:
                     break
 
@@ -305,7 +305,7 @@ class OSM(Network):
                 target = self.nodes.get(nid)
                 distance = end.distance_to(target)
                 if distance < distance_threshold:
-                    street.nids.remove(nid)
+                    self.remove_node(nid)
                 else:
                     break
 
@@ -318,7 +318,6 @@ class OSM(Network):
         """
         streets = self.ways.get_list()
         street_polygons = []
-        streets_to_remove = []
         distance_to_sidewalk = 0.0003
 
         for street in streets:
@@ -389,8 +388,12 @@ class OSM(Network):
         return ret
 
     def segment_parallel_streets(self, street_pair):
-        # First find parts of the street pairs that you want to merge (you don't want to merge entire streets
-        # because, for example, one could be much longer than the other and it doesn't make sense to merge
+        """
+        First find parts of the street pairs that you want to merge (you don't want to merge entire streets
+        because, for example, one could be much longer than the other and it doesn't make sense to merge
+        :param street_pair:
+        :return:
+        """
 
         # Take the two points from street_pair[0], and use it as a base vector.
         # Project all the points along the base vector and sort them.
@@ -474,7 +477,6 @@ class OSM(Network):
         # Expand streets into rectangles, then find intersections between them.
         # http://gis.stackexchange.com/questions/90055/how-to-find-if-two-polygons-intersect-in-python
         """
-        streets = self.ways.get_list()
         streets_to_remove = []
 
         # Merge parallel pairs
@@ -573,7 +575,7 @@ class OSM(Network):
                 self.add_way(s)
 
         for street_id in streets_to_remove:
-            self.ways.remove(street_id)
+            self.remove_way(street_id)
         return
 
     def simplify(self, way_id, threshold=0.5):
@@ -645,36 +647,37 @@ class OSM(Network):
 
     def split_streets(self):
         """
-        Split ways into pieces for preprocessing the OSM files.
+        Split ways into segments at intersections
         """
-        new_streets = Streets()
+        # new_streets = Streets()
         for way in self.ways.get_list():
             intersection_nids = [nid for nid in way.nids if self.nodes.get(nid).is_intersection()]
             intersection_indices = [way.nids.index(nid) for nid in intersection_nids]
-            if len(intersection_indices) == 0:
-                new_streets.add(way.id, way)
-            else:
+            if len(intersection_indices) > 0:
                 # Do not split streets if (i) there is only one intersection node and it is the on the either end of the
                 # street, or (ii) there are only two nodes and both of them are on the edge of the street.
                 # Otherwise split the street!
                 if len(intersection_indices) == 1 and (intersection_indices[0] == 0 or intersection_indices[0] == len(way.nids) - 1):
-                    new_streets.add(way)
+                    continue
                 elif len(intersection_indices) == 2 and (intersection_indices[0] == 0 and intersection_indices[1] == len(way.nids) - 1):
-                    new_streets.add(way)
+                    continue
                 elif len(intersection_indices) == 2 and (intersection_indices[1] == 0 and intersection_indices[0] == len(way.nids) - 1):
-                    new_streets.add(way)
+                    continue
                 else:
                     prev_idx = 0
                     for idx in intersection_indices:
                         if idx != 0 and idx != len(way.nids):
                             new_nids = way.nids[prev_idx:idx + 1]
                             new_way = Street(None, new_nids, way.type)
-                            new_streets.add(new_way)
+                            # new_streets.add(new_way)
+                            self.add_way(new_way)
                             prev_idx = idx
                     new_nids = way.nids[prev_idx:]
                     new_way = Street(None, new_nids, way.type)
-                    new_streets.add(new_way)
-        self.ways = new_streets
+                    # new_streets.add(new_way)
+                    self.add_way(new_way)
+                    self.remove_way(way.id)
+        # self.ways = new_streets
 
         return
 

@@ -210,8 +210,8 @@ def make_crosswalks(street_network, sidewalk_network):
     :param sidewalk_network: Sidewalk network object
     """
 
-    intersection_node_ids = list(street_network.ways.intersection_node_ids)
-    intersection_nodes = [street_network.nodes.get(nid) for nid in intersection_node_ids]
+    intersection_nodes = street_network.nodes.get_intersection_nodes()
+    # intersection_nodes = [street_network.nodes.get(nid) for nid in intersection_node_ids]
 
     # Create sidewalk nodes for each intersection node and overwrite the adjacency information
     for intersection_node in intersection_nodes:
@@ -261,10 +261,13 @@ def main(street_network):
 if __name__ == "__main__":
     # filename = "../resources/SimpleWay_01.osm"
     # filename = "../resources/Simple4WayIntersection_01.osm"
-    filename = "../resources/SmallMap_01.osm"
-    # filename = "../resources/ParallelLanes_01.osm"
+    # filename = "../resources/SmallMap_01.osm"
+    filename = "../resources/ParallelLanes_01.osm"
     street_network = parse(filename)
     street_network.preprocess()
     street_network.parse_intersections()
 
-    print main(street_network)
+    geojson = main(street_network)
+    print geojson
+    import geojsonio
+    geojsonio.display(geojsonio)

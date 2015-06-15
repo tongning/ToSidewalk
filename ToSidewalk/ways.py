@@ -1,3 +1,5 @@
+import json
+
 class Way(object):
     def __init__(self, wid=None, nids=(), type=None):
         if wid is None:
@@ -13,8 +15,36 @@ class Way(object):
         return self.parent_ways
 
     def export(self):
-        if self.parent_ways:
-            pass
+        if self.parent_ways and self.parent_ways.parent_network:
+            geojson = {}
+            geojson['type'] = "FeatureCollection"
+            geojson['features'] = []
+            feature = self.get_geojson_features()
+            geojson['features'].append(feature)
+            return json.dumps(geojson)
+
+    def get_geojson_features(self):
+        feature = {}
+        feature['properties'] = {
+            'type': self.type,
+            'id': self.id,
+            'user': self.user,
+            "stroke-width": 2,
+            "stroke-opacity": 1,
+            'stroke': '#e93f3f'
+        }
+        feature['type'] = 'Feature'
+        feature['id'] = 'way/%s' % (self.id)
+
+        coordinates = []
+        for nid in self.nids:
+            node = self.parent_ways.parent_network.nodes.get(nid)
+            coordinates.append([node.lng, node.lat])
+        feature['geometry'] = {
+            'type': 'LineString',
+            'coordinates': coordinates
+        }
+        return feature
 
     def get_node_ids(self):
         return self.nids
