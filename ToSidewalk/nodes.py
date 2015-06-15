@@ -1,4 +1,5 @@
 from latlng import LatLng
+import json
 import numpy as np
 import math
 import logging as log
@@ -38,11 +39,15 @@ class Node(LatLng):
     def belongs_to(self):
         return self.parent_nodes
 
-    def is_intersection(self):
-        return len(self.way_ids) >= self.min_intersection_cardinality
-
-    def has_sidewalk_nodes(self):
-        return len(self.sidewalk_nodes) > 0
+    def export(self):
+        if self.parent_nodes and self.parent_nodes.parent_network:
+            geojson = {}
+            geojson['type'] = "FeatureCollection"
+            geojson['features'] = []
+            for way_id in self.way_ids:
+                way = self.parent_nodes.parent_network.ways.get(way_id)
+                geojson['features'].append(way.get_geojson_features())
+            return json.dumps(geojson)
 
     def get_way_ids(self):
         return self.way_ids
@@ -58,6 +63,12 @@ class Node(LatLng):
 
     def get_sidewalk_nodes(self, wid):
         return self.sidewalk_nodes[wid]
+
+    def has_sidewalk_nodes(self):
+        return len(self.sidewalk_nodes) > 0
+
+    def is_intersection(self):
+        return len(self.way_ids) >= self.min_intersection_cardinality
 
     def remove_way_id(self, wid):
         if wid in self.way_ids:
@@ -94,6 +105,9 @@ class Nodes(object):
             return self.nodes[nid]
         else:
             return None
+
+    def get_intersection_nodes(self):
+        return [self.nodes[nid] for nid in self.nodes if self.nodes[nid].is_intersection()]
 
     def get_list(self):
         return self.nodes.values()

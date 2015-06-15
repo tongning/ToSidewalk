@@ -1,7 +1,6 @@
 import unittest
 import random
-from ToSidewalk.nodes import Node, Nodes
-from ToSidewalk.ways import Streets, Street
+from ToSidewalk.ways import *
 from ToSidewalk.ToSidewalk import *
 
 class TestToSidewalkMethods(unittest.TestCase):
@@ -141,7 +140,6 @@ class TestToSidewalkMethods(unittest.TestCase):
 
             intersection = np.cross(l1, l2)
             intersection /= intersection[2]
-            #print intersection
             lng_min = min([s1_n1.lng,
                           s1_n2.lng,
                           s2_n1.lng,
@@ -179,7 +177,7 @@ class TestToSidewalkMethods(unittest.TestCase):
             street_network = parse(filename)
             street_network.preprocess()
             street_network.parse_intersections()
-            print main(street_network)
+            log.debug(main(street_network))
 
 if __name__ == '__main__':
     unittest.main()
