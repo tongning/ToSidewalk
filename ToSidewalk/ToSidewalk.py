@@ -269,5 +269,4 @@ if __name__ == "__main__":
 
     geojson = main(street_network)
     print geojson
-    import geojsonio
-    geojsonio.display(geojsonio)
+
