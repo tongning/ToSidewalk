@@ -264,6 +264,7 @@ if __name__ == "__main__":
     # filename = "../resources/SmallMap_01.osm"
     # filename = "../resources/ParallelLanes_01.osm"
     filename = "../resources/SmallMap_04.osm"
+    # filename = "../resources/SegmentedStreet_01.osm"
     street_network = parse(filename)
     street_network.preprocess()
     street_network.parse_intersections()

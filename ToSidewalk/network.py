@@ -1,12 +1,14 @@
 from xml.etree import cElementTree as ET
 from shapely.geometry import Polygon, Point, LineString
 import json
+import logging as log
 import math
 import numpy as np
 
 from nodes import Node, Nodes
 from ways import Street, Streets
 from utilities import window, area
+
 
 
 class Network(object):
@@ -146,6 +148,7 @@ class OSM(Network):
         """
 
         parallel_segments = self.find_parallel_street_segments()
+        log.debug(parallel_segments)
         self.merge_parallel_street_segments(parallel_segments)
 
         self.split_streets()
@@ -331,7 +334,6 @@ class OSM(Network):
             if pair[0].intersects(pair[1]) and angle_diff < 10.:
                 # If the polygon intersects, and they have a kind of similar angle, and they don't share a node,
                 # then they should be merged together.
-
                 parallel_pairs.append((street_polygons.index(pair[0]), street_polygons.index(pair[1])))
 
         filtered_parallel_pairs = []
@@ -378,7 +380,6 @@ class OSM(Network):
         :param street_pair:
         :return:
         """
-
         # Take the two points from street_pair[0], and use it as a base vector.
         # Project all the points along the base vector and sort them.
         base_node0 = self.nodes.get(street_pair[0].nids[0])
@@ -491,7 +492,6 @@ class OSM(Network):
             for nid in subset_nids:
                 try:
                     if nid == street1_nid:
-                        # print "Street 1"
                         street1_idx += 1
                         street1_nid = street1_segment[1][street1_idx]
 
@@ -501,7 +501,6 @@ class OSM(Network):
                         opposite_node_2 = self.nodes.get(opposite_node_2_nid)
 
                     else:
-                        # print "Street 2"
                         street2_idx += 1
                         street2_nid = self.ways.get(pair[1]).nids[street2_idx]
 
@@ -530,6 +529,7 @@ class OSM(Network):
                     self.add_node(new_node)
                     new_street_nids.append(new_node.id)
 
+            log.debug(pair)
             node_to[subset_nids[0]] = new_street_nids[0]
             node_to[subset_nids[-1]] = new_street_nids[-1]
 
@@ -652,7 +652,6 @@ class OSM(Network):
             t = triangle(group[0], group[1], group[2])
             dict[group[1]] = t
             heappush(heap, t)
-
 
         while float(len(heap) + 2) / len(latlngs) > threshold:
             try:
