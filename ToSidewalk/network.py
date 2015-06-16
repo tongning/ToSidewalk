@@ -2,7 +2,7 @@ from xml.etree import cElementTree as ET
 from shapely.geometry import Polygon, Point, LineString
 import json
 import logging as log
-import math
+import math, random
 import numpy as np
 
 from nodes import Node, Nodes
@@ -11,6 +11,8 @@ from utilities import window, area
 
 from itertools import combinations
 from heapq import heappush, heappop, heapify
+
+debug = False
 
 class Network(object):
     def __init__(self, nodes, ways):
@@ -304,7 +306,7 @@ class OSM(Network):
         streets = self.ways.get_list()
         street_polygons = []
         distance_to_sidewalk = 0.00003
-
+        lines = []
         for street in streets:
             start_node_id = street.get_node_ids()[0]
             end_node_id = street.get_node_ids()[-1]
@@ -317,12 +319,36 @@ class OSM(Network):
             p2 = end_node.vector() + perpendicular
             p3 = end_node.vector() - perpendicular
             p4 = start_node.vector() - perpendicular
-
+            if debug:
+                lines.append([list(p1)[::-1], list(p2)[::-1]])
+                lines.append([list(p2)[::-1], list(p3)[::-1]])
+                lines.append([list(p3)[::-1], list(p4)[::-1]])
+                lines.append([list(p4)[::-1], list(p1)[::-1]])
             poly = Polygon([p1, p2, p3, p4])
             poly.angle = math.degrees(math.atan2(vector[0], vector[1]))
             poly.nids = set((start_node_id, end_node_id))
             street_polygons.append(poly)
-
+        if debug:
+            geojson = {
+                      "type": "FeatureCollection"
+                    , "features": []
+                    }
+            for line in lines:
+                id = str(random.randrange(0, 10000000))
+                feature = {
+                          "geometry": {
+                                  "type": "LineString"
+                                  , "coordinates": list(line)
+                                }
+                        , "type": "Feature"
+                        , "properties": {
+                                  "stroke": "#111111"
+                                  , "type": "footway"
+                                  , "id": id
+                                  , "user": "test"}
+                        , "id": "way/" + id}
+                geojson["features"].append(feature)
+            print(json.dumps(geojson))
         # Find pair of polygons that intersect each other.
         polygon_combinations = combinations(street_polygons, 2)
         parallel_pairs = []
