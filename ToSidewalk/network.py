@@ -359,16 +359,12 @@ class OSM(Network):
                 adj_node2 = self.nodes.get(adj_nid2)
                 angle_to_node1 = math.degrees(shared_node.angle_to(adj_node1))
                 angle_to_node2 = math.degrees(shared_node.angle_to(adj_node2))
-                if abs(angle_to_node2 - angle_to_node1) > 90:
+                if ((angle_to_node1 - angle_to_node2) + 360.) % 180. > 90:
                     # Paths are connected but they are not parallel lines
                     continue
             filtered_parallel_pairs.append(pair)
 
-        ret = []
-        for pair in filtered_parallel_pairs:
-            ret.append((streets[pair[0]].id, streets[pair[1]].id))
-
-        return ret
+        return [(streets[pair[0]].id, streets[pair[1]].id) for pair in filtered_parallel_pairs]
 
     def segment_parallel_streets(self, street_pair):
         """
