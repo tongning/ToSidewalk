@@ -157,11 +157,14 @@ class TestNetworkMethods(unittest.TestCase):
     def test_parse(self):
         filename = "../../resources/SmallMap_01.osm"
         street_network = parse(filename)
+        # Todo: Write a test to see the parsing worked
+
 
     def test_split_streets(self):
         filename = "../../resources/SmallMap_01.osm"
         street_network = parse(filename)
         street_network.preprocess()
+        # Todo: Write a better test...
 
     def test_swap_nodes(self):
         node1 = Node(1, 1, 1)
@@ -236,15 +239,9 @@ class TestNetworkMethods(unittest.TestCase):
         nodes = Nodes()
         ways = Ways()
         network = OSM(nodes, ways, None)
-        network.add_node(node0)
-        network.add_node(node1)
-        network.add_node(node2)
-        network.add_node(node3)
-        network.add_node(node4)
-        network.add_way(way1)
-        network.add_way(way2)
-        network.add_way(way3)
-        network.add_way(way4)
+        network.add_nodes([node0, node1, node2, node3, node4])
+        network.add_ways([way1, way2, way3, way4])
+
         mygeojson = network.export()
         string = """{"type": "FeatureCollection", "features": [{"geometry": {"type": "LineString", "coordinates": [[0.0, 0.0], [1.0, 0.0]]}, "type": "Feature", "properties": {"stroke": "#555555", "type": null, "id": "1", "user": "test"}, "id": "way/1"}, {"geometry": {"type": "LineString", "coordinates": [[0.0, 0.0], [-1.0, 0.0]]}, "type": "Feature", "properties": {"stroke": "#555555", "type": null, "id": "3", "user": "test"}, "id": "way/3"}, {"geometry": {"type": "LineString", "coordinates": [[0.0, 0.0], [0.0, 1.0]]}, "type": "Feature", "properties": {"stroke": "#555555", "type": null, "id": "2", "user": "test"}, "id": "way/2"}, {"geometry": {"type": "LineString", "coordinates": [[0.0, 0.0], [0.0, -1.0]]}, "type": "Feature", "properties": {"stroke": "#555555", "type": null, "id": "4", "user": "test"}, "id": "way/4"}]}"""
         self.assertEqual(mygeojson, string)

@@ -457,9 +457,11 @@ class OSM(Network):
 
     def merge_parallel_street_segments(self, parallel_pairs):
         """
+        Note: Maybe I don't even have to merge any path (which breaks the original street network data structure.
+        Instead, I can mark ways that have parallel neighbors not make sidewalks on both sides...
+
         :param parallel_pairs: pairs of street_ids.
         Todo: This method needs to be optimized using some spatial data structure (e.g., r*-tree) and other metadata..
-        Todo. And I should break this function into find_parallel_street_segments and merge_parallel_street_segments.
         # Expand streets into rectangles, then find intersections between them.
         # http://gis.stackexchange.com/questions/90055/how-to-find-if-two-polygons-intersect-in-python
         """
