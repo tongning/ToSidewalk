@@ -122,6 +122,15 @@ class TestNetworkMethods(unittest.TestCase):
 
         # self.assertEqual(answer_segment_coordinates[0], merged_segment[0])
 
+    def test_merge_parallel_street_segments2(self):
+        filename = "../../resources/ParallelLanes_03.osm"
+
+        street_network = parse(filename)
+        street_network.split_streets()
+        parallel_segments = street_network.find_parallel_street_segments()
+        street_network.merge_parallel_street_segments(parallel_segments)
+        return
+
     def test_simplify(self):
         segment1_coordinates = [
             (0., 2.),

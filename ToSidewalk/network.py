@@ -146,16 +146,17 @@ class OSM(Network):
         Preprocess and clean up the data
         :return:
         """
-
         parallel_segments = self.find_parallel_street_segments()
-        log.debug(parallel_segments)
         self.merge_parallel_street_segments(parallel_segments)
 
         self.split_streets()
         self.update_ways()
         self.merge_nodes()
+
         # Clean up and so I can make a sidewalk network
         self.clean_street_segmentation()
+
+
 
         # Remove ways that have only a single node.
         for way in self.ways.get_list():
@@ -305,7 +306,7 @@ class OSM(Network):
         """
         streets = self.ways.get_list()
         street_polygons = []
-        distance_to_sidewalk = 0.0003
+        distance_to_sidewalk = 0.00003
 
         for street in streets:
             start_node_id = street.get_node_ids()[0]
@@ -471,6 +472,8 @@ class OSM(Network):
             # First find parts of the street pairs that you want to merge (you don't want to merge entire streets
             # because, for example, one could be much longer than the other and it doesn't make sense to merge
             subset_nids, street1_segment, street2_segment = self.segment_parallel_streets((street_pair[0], street_pair[1]))
+            if not subset_nids:
+                continue
 
             # Get two parallel segments and the distance between them
             street1_node = self.nodes.get(street1_segment[1][0])
@@ -606,7 +609,7 @@ class OSM(Network):
                     s = Street(None, street2_segment[2])
                     self.add_way(s)
 
-        for street_id in streets_to_remove:
+        for street_id in set(streets_to_remove):
             self.remove_way(street_id)
         return
 
