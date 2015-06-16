@@ -9,7 +9,8 @@ from nodes import Node, Nodes
 from ways import Street, Streets
 from utilities import window, area
 
-
+from itertools import combinations
+from heapq import heappush, heappop, heapify
 
 class Network(object):
     def __init__(self, nodes, ways):
@@ -24,14 +25,10 @@ class Network(object):
         # Initialize the bounding box
         for node in self.nodes.get_list():
             # lat, lng = node.latlng.location(radian=False)
-            if node.lat < self.bounds[0]:
-                self.bounds[0] = node.lat
-            elif node.lat > self.bounds[2]:
-                self.bounds[2] = node.lat
-            if node.lng < self.bounds[1]:
-                self.bounds[1] = node.lng
-            elif node.lng > self.bounds[3]:
-                self.bounds[3] = node.lng
+            self.bounds[0] = min(node.lat, self.bounds[0])
+            self.bounds[2] = max(node.lat, self.bounds[2])
+            self.bounds[1] = min(node.lng, self.bounds[1])
+            self.bounds[3] = max(node.lng, self.bounds[3])
 
     def add_node(self, node):
         """
@@ -327,7 +324,6 @@ class OSM(Network):
             street_polygons.append(poly)
 
         # Find pair of polygons that intersect each other.
-        from itertools import combinations
         polygon_combinations = combinations(street_polygons, 2)
         parallel_pairs = []
         for pair in polygon_combinations:
@@ -648,7 +644,6 @@ class OSM(Network):
             def _str__(self):
                 return str(self.idx) + " area=" + str(self.area)
 
-        from heapq import heappush, heappop, heapify
         dict = {}
         heap = []
         for i, group in enumerate(groups):
