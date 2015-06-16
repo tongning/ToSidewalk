@@ -9,7 +9,8 @@ from nodes import Node, Nodes
 from ways import Street, Streets
 from utilities import window, area
 
-
+from itertools import combinations
+from heapq import heappush, heappop, heapify
 
 class Network(object):
     def __init__(self, nodes, ways):
@@ -24,14 +25,10 @@ class Network(object):
         # Initialize the bounding box
         for node in self.nodes.get_list():
             # lat, lng = node.latlng.location(radian=False)
-            if node.lat < self.bounds[0]:
-                self.bounds[0] = node.lat
-            elif node.lat > self.bounds[2]:
-                self.bounds[2] = node.lat
-            if node.lng < self.bounds[1]:
-                self.bounds[1] = node.lng
-            elif node.lng > self.bounds[3]:
-                self.bounds[3] = node.lng
+            self.bounds[0] = min(node.lat, self.bounds[0])
+            self.bounds[2] = max(node.lat, self.bounds[2])
+            self.bounds[1] = min(node.lng, self.bounds[1])
+            self.bounds[3] = max(node.lng, self.bounds[3])
 
     def add_node(self, node):
         """
@@ -327,7 +324,6 @@ class OSM(Network):
             street_polygons.append(poly)
 
         # Find pair of polygons that intersect each other.
-        from itertools import combinations
         polygon_combinations = combinations(street_polygons, 2)
         parallel_pairs = []
         for pair in polygon_combinations:
@@ -363,16 +359,12 @@ class OSM(Network):
                 adj_node2 = self.nodes.get(adj_nid2)
                 angle_to_node1 = math.degrees(shared_node.angle_to(adj_node1))
                 angle_to_node2 = math.degrees(shared_node.angle_to(adj_node2))
-                if abs(angle_to_node2 - angle_to_node1) > 90:
+                if ((angle_to_node1 - angle_to_node2) + 360.) % 180. > 90:
                     # Paths are connected but they are not parallel lines
                     continue
             filtered_parallel_pairs.append(pair)
 
-        ret = []
-        for pair in filtered_parallel_pairs:
-            ret.append((streets[pair[0]].id, streets[pair[1]].id))
-
-        return ret
+        return [(streets[pair[0]].id, streets[pair[1]].id) for pair in filtered_parallel_pairs]
 
     def segment_parallel_streets(self, street_pair):
         """
@@ -650,7 +642,6 @@ class OSM(Network):
             def _str__(self):
                 return str(self.idx) + " area=" + str(self.area)
 
-        from heapq import heappush, heappop, heapify
         dict = {}
         heap = []
         for i, group in enumerate(groups):
