@@ -327,17 +327,11 @@ class OSM(Network):
         polygon_combinations = combinations(street_polygons, 2)
         # Create a list for storing parallel pairs
         parallel_pairs = []
-        # All possible pairs are stored for debugging purposes
+
 
 
         # Todo: change the variable name pair to pair_poly
         for pair in polygon_combinations: # pair[0] and pair[1] are polygons
-            # Add the pair to the list of all possible pairs for debug, but limit size to 50
-
-
-
-
-
             angle_diff = ((pair[0].angle - pair[1].angle) + 360.) % 180.
             if pair[0].intersects(pair[1]) and (angle_diff < 10. or angle_diff>170.):
                 # If the polygon intersects, and they have a kind of similar angle, and they don't share a node,
@@ -350,10 +344,7 @@ class OSM(Network):
         #Filter parallel_pairs and store in filtered_parallel_pairs
         for pair in parallel_pairs:
             street_pair = (streets[pair[0]], streets[pair[1]])
-            street1 = streets[pair[0]]
-            street2 = streets[pair[1]]
             shared_nids = set(street_pair[0].nids) & set(street_pair[1].nids)
-
             # Find the adjacent nodes for the shared node
             if len(shared_nids) > 0:
                 # Two paths merges at one node
@@ -380,14 +371,8 @@ class OSM(Network):
 
                 if abs(abs(angle_to_node1)-abs(angle_to_node2)) > 90:
                     # Paths are connected but they are not parallel lines
-                    #if not ((street1.nids[0]=='49788018' or street1.nids[-1] == '49788018') and (street2.nids[0]=='2428508041' or street2.nids[-1] == '2428508041')):
                     continue
             filtered_parallel_pairs.append(pair)
-
-
-
-
-        #log.debug([(streets[pair[0]].id) for pair in filtered_all_pairs_debug])
         return [(streets[pair[0]].id, streets[pair[1]].id) for pair in filtered_parallel_pairs]
 
     def segment_parallel_streets(self, street_pair):
