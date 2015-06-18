@@ -12,7 +12,7 @@ from utilities import window, area
 from itertools import combinations
 from heapq import heappush, heappop, heapify
 
-debug = False
+debug = True
 
 class Network(object):
     def __init__(self, nodes, ways):
@@ -420,9 +420,37 @@ class OSM(Network):
                 return 0
 
         all_nodes = [self.nodes.get(nid) for nid in street_pair[0].nids] + [self.nodes.get(nid) for nid in street_pair[1].nids]
-        #all_nodes = sorted(all_nodes, cmp=cmp_with_projection)
-        test_list = []
-        for node in all_nodes:
+        all_nodes = sorted(all_nodes, cmp=cmp_with_projection)
+        all_nids = [node.id for node in all_nodes]
+
+        # Condition in list comprehension
+        # http://stackoverflow.com/questions/4260280/python-if-else-in-list-comprehension
+        all_nids_street_indices = [0 if nid in street_pair[0].nids else 1 for nid in all_nids]
+        # all_nids_street_indices is now a list parallel to all_nids where the value is 1 if the corrisponding value belongs to the first street
+        # on [a, b, c, d, ...] returns (a, b), (b, c), (c, d) ....
+        # for each pair, store false if the parent streets are equal
+        # Because of the way window works, the length of this list will always be one minus the length of all_nids_street_indices
+        all_nids_street_switch = [idx_pair[0] != idx_pair[1] for idx_pair in window(all_nids_street_indices, 2)]
+
+        begin_idx = all_nids_street_switch.index(True) # Gets index of first True in the list
+        end_idx = len(all_nids_street_switch) - 1 - all_nids_street_switch[::-1].index(True) # Gets index of last True in the list
+
+        overlapping_segment = all_nids[begin_idx:end_idx]
+        if all_nids[0] in street_pair[0].nids:
+            street1_nids = all_nids[:begin_idx]
+            street2_nids = all_nids[begin_idx:]
+        else:
+            street1_nids = all_nids[begin_idx:]
+            street2_nids = all_nids[:begin_idx]
+
+        if begin_idx == end_idx:
+            return [self.nids.get(overlapping_segment[0])], street1_nids, street2_nids
+
+        overlapping_nodes_normalized = []
+        base_node0 = self.nodes.get(overlapping_segment[0])
+        base_node1 = self.nodes.get(overlapping_segment[-1])
+        for nid in overlapping_segment:
+            node = self.nodes.get(nid)
             slope = (base_node1.vector()[1] - base_node0.vector()[1]) / (base_node1.vector()[0] - base_node0.vector()[0])
             # first y = slope(x-base_node0.vector()[0]) + base_node0.vector()[1]
             # other y = (-1/slope)(x-node.vector()[0]) + node.vector()[1]
@@ -435,65 +463,12 @@ class OSM(Network):
             # x = ( slope * basex - invertedslope * nodex + nodey - basey ) / ( slope - invertedslope)
             x = ( ( slope * base_node0.vector()[0]) - ((-1/slope) * node.vector()[0]) + node.vector()[1] - base_node0.vector()[1]) / (slope + 1/slope)
             #print x, slope*(x - base_node0.vector()[0]) + base_node0.vector()[1]
-            test_list.append([slope*(x - base_node0.vector()[0]) + base_node0.vector()[1], x])
-        self.print_features("Point", test_list)
-        all_nids = [node.id for node in all_nodes]
+            overlapping_nodes_normalized.append([slope*(x - base_node0.vector()[0]) + base_node0.vector()[1], x])
+        if debug: 
+            self.print_features("Point", overlapping_nodes_normalized)
+            self.print_features("Point", [self.nodes.get(node).vector()[::-1] for node in overlapping_segment])
 
-        # Condition in list comprehension
-        # http://stackoverflow.com/questions/4260280/python-if-else-in-list-comprehension
-        all_nids_street_indices = [0 if nid in street_pair[0].nids else 1 for nid in all_nids]
-        all_nids_street_switch = [idx_pair[0] != idx_pair[1] for idx_pair in window(all_nids_street_indices, 2)]
-
-        # Find the first occurence of an element in a list
-        # http://stackoverflow.com/questions/9868653/find-first-list-item-that-matches-criteria
-        #begin_idx = all_nids_street_switch.index(next(x for x in all_nids_street_switch if x))
-        begin_idx = all_nids_street_switch.index(True) # Gets index of first True in the list
-
-        # Find the last occurence of an element in a list
-        # http://stackoverflow.com/questions/6890170/how-to-find-the-last-occurrence-of-an-item-in-a-python-list
-        #end_idx = (len(all_nids_street_switch) - 1) - all_nids_street_switch[::-1].index(next(x for x in all_nids_street_switch if x))
-        end_idx = len(all_nids_street_switch) - 1 - all_nids_street_switch[::-1].index(True)
-
-        overlapping_segment = all_nids[begin_idx:end_idx]
-
-        begin_nid = all_nids[begin_idx]
-        if begin_nid in street_pair[0].nids:
-            street1_begin_nid = begin_nid
-            street2_begin_nid = all_nids[begin_idx + 1]
-        else:
-            street1_begin_nid = all_nids[begin_idx + 1]
-            street2_begin_nid = begin_nid
-        street1_begin_idx = street_pair[0].nids.index(street1_begin_nid)
-        street2_begin_idx = street_pair[1].nids.index(street2_begin_nid)
-
-        end_nid = all_nids[end_idx]
-        if end_nid in street_pair[0].nids:
-            street1_end_nid = end_nid
-            street2_end_nid = all_nids[end_idx + 1]
-        else:
-            street1_end_nid = all_nids[end_idx + 1]
-            street2_end_nid = end_nid
-        street1_end_idx = street_pair[0].nids.index(street1_end_nid)
-        street2_end_idx = street_pair[1].nids.index(street2_end_nid)
-
-        street1_segmentation = [street_pair[0].nids[:street1_begin_idx],
-                                street_pair[0].nids[street1_begin_idx:street1_end_idx + 1],
-                                street_pair[0].nids[street1_end_idx + 1:]]
-        street2_segmentation = [street_pair[1].nids[:street2_begin_idx],
-                                street_pair[1].nids[street2_begin_idx:street2_end_idx + 1],
-                                street_pair[1].nids[street2_end_idx + 1:]]
-
-        if street1_segmentation[0]:
-            street1_segmentation[0].append(street1_segmentation[1][0])
-        if street1_segmentation[2]:
-            street1_segmentation[2].insert(0, street1_segmentation[1][-1])
-
-        if street2_segmentation[0]:
-            street2_segmentation[0].append(street2_segmentation[1][0])
-        if street2_segmentation[2]:
-            street2_segmentation[2].insert(0, street2_segmentation[1][-1])
-
-        return overlapping_segment, street1_segmentation, street2_segmentation
+        return overlapping_nodes_normalized, street1_nids, street2_nids
 
     def merge_parallel_street_segments(self, parallel_pairs):
         """
