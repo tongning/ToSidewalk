@@ -402,10 +402,20 @@ class OSM(Network):
         """
         # Take the two points from street_pair[0], and use it as a base vector.
         # Project all the points along the base vector and sort them.
-        base_node0 = self.nodes.get(street_pair[0].nids[-1])
+        street0_node0 = self.nodes.get(street_pair[0].nids[0])
+        street0_node1 = self.nodes.get(street_pair[0].nids[-1])
+        street1_node0 = self.nodes.get(street_pair[1].nids[0])
+        street1_node1 = self.nodes.get(street_pair[1].nids[-1])
+        p1 = street0_node0.vector_to(street1_node1)
+        p2 = street0_node1.vector_to(street1_node0)
+        if abs(p1[1] - p1[0]) > abs(p2[1] - p2[0]):
+            base_node0 = street0_node0
+            base_node1 = street1_node1
+        else:
+            base_node0 = street0_node1
+            base_node1 = street1_node0
         base_node1 = self.nodes.get(street_pair[1].nids[0])
         base_vector = base_node0.vector_to(base_node1, normalize=True)
-
         def cmp_with_projection(n1, n2):
             dot_product1 = np.dot(n1.vector(), base_vector)
             dot_product2 = np.dot(n2.vector(), base_vector)
