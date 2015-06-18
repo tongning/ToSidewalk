@@ -92,7 +92,6 @@ class Network(object):
         node_list = self.nodes.get_list()
         intersection_node_ids = [node.id for node in node_list if node.is_intersection()]
         self.ways.set_intersection_node_ids(intersection_node_ids)
-        return
     def print_features(self, type, lines):
         geojson = {
                   "type": "FeatureCollection"
@@ -119,7 +118,6 @@ class Network(object):
         for way_id in node.way_ids:
             self.ways.get(way_id).remove_node(nid)
         self.nodes.remove(nid)
-        return
 
     def remove_way(self, way_id):
         """
@@ -148,7 +146,6 @@ class Network(object):
             for way_id in node.way_ids:
                 self.ways.get(way_id).swap_nodes(nid_from, nid_to)
             self.nodes.remove(nid_from)
-        return
 
 class OSM(Network):
 
@@ -181,7 +178,6 @@ class OSM(Network):
         for way in self.ways.get_list():
             if len(way.nids) < 2:
                 self.remove_way(way.id)
-        return
 
     def clean_street_segmentation(self):
         """
@@ -210,7 +206,6 @@ class OSM(Network):
                 self.remove_way(way_id_1)
                 self.remove_way(way_id_2)
 
-        return
 
     def export(self, format="geojson"):
         """
@@ -315,8 +310,6 @@ class OSM(Network):
                     self.remove_node(nid)
                 else:
                     break
-
-        return
 
     def find_parallel_street_segments(self):
         """
@@ -660,7 +653,6 @@ class OSM(Network):
 
         for street_id in set(streets_to_remove):
             self.remove_way(street_id)
-        return
 
     def simplify(self, way_id, threshold=0.5):
         """
@@ -676,7 +668,7 @@ class OSM(Network):
         # Python heap
         # http://stackoverflow.com/questions/12749622/creating-a-heap-in-python
         # http://stackoverflow.com/questions/3954530/how-to-make-heapq-evaluate-the-heap-off-of-a-specific-attribute
-        class triangle(object):
+        class triangle():
             def __init__(self, prev_idx, idx, next_idx):
                 self.idx = idx
                 self.prev_idx = idx - 1
@@ -725,8 +717,6 @@ class OSM(Network):
         new_nids.append(nodes[-1].id)
         self.ways.get(way_id).nids = new_nids
 
-        return
-
     def split_streets(self):
         """
         Split ways into segments at intersections
@@ -760,8 +750,6 @@ class OSM(Network):
                     self.add_way(new_way)
                     self.remove_way(way.id)
         # self.ways = new_streets
-
-        return
 
     def update_ways(self):
         # Update the way_ids
@@ -817,7 +805,6 @@ def parse_intersections(nodes, ways):
     node_list = nodes.get_list()
     intersection_node_ids = [node.id for node in node_list if node.is_intersection()]
     ways.set_intersection_node_ids(intersection_node_ids)
-    return
 
 
 if __name__ == "__main__":
