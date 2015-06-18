@@ -385,11 +385,7 @@ class OSM(Network):
             filtered_parallel_pairs.append(pair)
 
 
-        log.debug("Debug")
-        for pair in filtered_parallel_pairs:
 
-            log.debug((streets[pair[0]].id, streets[pair[1]].id))
-        log.debug("End debug")
 
         #log.debug([(streets[pair[0]].id) for pair in filtered_all_pairs_debug])
         return [(streets[pair[0]].id, streets[pair[1]].id) for pair in filtered_parallel_pairs]
