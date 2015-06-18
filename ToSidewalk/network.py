@@ -492,9 +492,8 @@ class OSM(Network):
             if not subset_nids or len(subset_nids) == 0:
                 continue
             # Testing
-            subset_nids = subset_nids[::-1]
-            street1_segment = street1_segment[::-1]
-            street2_segment = street2_segment[::-1]
+            #assert subset_nids[0][0] > subset_nids[0][1]
+            subset_nids = [nid[::-1] for nid in subset_nids]
             if debug: self.print_features("Point", chain(street1_segment, subset_nids, street2_segment))
             nodes = []
             for node in chain(street1_segment, subset_nids, street2_segment):
