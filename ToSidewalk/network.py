@@ -303,7 +303,7 @@ class OSM(Network):
         """
         streets = self.ways.get_list()
         street_polygons = []
-        distance_to_sidewalk = 0.00003
+        distance_to_sidewalk = 0.00005
 
         for street in streets:
             start_node_id = street.get_node_ids()[0]
@@ -339,10 +339,12 @@ class OSM(Network):
             #log.debug("currently checking: ")
             street1 = streets[street_polygons.index(pair[0])]
             street2 = streets[street_polygons.index(pair[1])]
-            if (street1.nids[0]=='49788018' or street1.nids[-1] == '49788018') and (street2.nids[0]=='2428508041' or street2.nids[-1] == '2428508041'):
-                log.debug("I am comparing the two segments of maryland ave!")
+            #if (street1.nids[0]=='49788018' or street1.nids[-1] == '49788018') and (street2.nids[0]=='2428508041' or street2.nids[-1] == '2428508041'):
+            if (street1.nids[0]=='1484481958' or street1.nids[-1] == '1484481958') and (street2.nids[0]=='637994525' or street2.nids[-1] == '637994525'):
+
+                log.debug("I am comparing the two segments of benning road!")
                 angle_diff_debug = ((pair[0].angle - pair[1].angle) + 360.) % 180.
-                log.debug("angle diff for maryland ave is " + str(angle_diff_debug))
+                log.debug("angle diff for benning rd is " + str(angle_diff_debug))
                 log.debug("overlap")
                 log.debug(pair[0].intersects(pair[1]))
             #log.debug("Street 1 ends at node "+str(street1.nids[-1]))
@@ -359,6 +361,8 @@ class OSM(Network):
         #Filter parallel_pairs and store in filtered_parallel_pairs
         for pair in parallel_pairs:
             street_pair = (streets[pair[0]], streets[pair[1]])
+            street1 = streets[pair[0]]
+            street2 = streets[pair[1]]
             shared_nids = set(street_pair[0].nids) & set(street_pair[1].nids)
 
             # Find the adjacent nodes for the shared node
@@ -372,9 +376,11 @@ class OSM(Network):
                 # Nodes are sorted by longitude (x-axis), so two paths should merge at the left-most node or the
                 # right most node.
                 if idx1 == 0 and idx2 == 0:
+                    # The case where shared node is at the left-end
                     adj_nid1 = street_pair[0].nids[1]
                     adj_nid2 = street_pair[1].nids[1]
                 else:
+                    # The case where sahred node is at the right-end
                     adj_nid1 = street_pair[0].nids[-2]
                     adj_nid2 = street_pair[1].nids[-2]
 
@@ -382,15 +388,23 @@ class OSM(Network):
                 adj_node2 = self.nodes.get(adj_nid2)
                 angle_to_node1 = math.degrees(shared_node.angle_to(adj_node1))
                 angle_to_node2 = math.degrees(shared_node.angle_to(adj_node2))
-                if ((angle_to_node1 - angle_to_node2) + 360.) % 180. > 90:
+                #if (street1.nids[0]=='49788018' or street1.nids[-1] == '49788018') and (street2.nids[0]=='2428508041' or street2.nids[-1] == '2428508041'):
+                if (street2.nids[0]=='1484481958' or street2.nids[-1] == '1484481958') and (street1.nids[0]=='637994525' or street1.nids[-1] == '637994525'):
+
+                    log.debug("benning road check 2")
+                    log.debug(abs(abs(angle_to_node1)-abs(angle_to_node2)))
+                    log.debug(angle_to_node1 - angle_to_node2)
+                    log.debug(str(angle_to_node1) + str(angle_to_node2))
+                if abs(abs(angle_to_node1)-abs(angle_to_node2)) > 90:
                     # Paths are connected but they are not parallel lines
+                    #if not ((street1.nids[0]=='49788018' or street1.nids[-1] == '49788018') and (street2.nids[0]=='2428508041' or street2.nids[-1] == '2428508041')):
                     continue
             filtered_parallel_pairs.append(pair)
 
 
         log.debug("Debug")
         for pair in filtered_parallel_pairs:
-            log.debug(streets[pair[0]])
+
             log.debug((streets[pair[0]].id, streets[pair[1]].id))
         log.debug("End debug")
 
