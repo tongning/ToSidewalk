@@ -9,7 +9,7 @@ from nodes import Node, Nodes
 from ways import Street, Streets
 from utilities import window, area
 
-from itertools import combinations
+from itertools import combinations, chain
 from heapq import heappush, heappop, heapify
 
 debug = True
@@ -444,7 +444,8 @@ class OSM(Network):
             street2_nids = all_nids[:begin_idx]
 
         if begin_idx == end_idx:
-            return [self.nids.get(overlapping_segment[0])], street1_nids, street2_nids
+            return [], [self.nodes.get(nid).vector() for node in street1_nids], [self.nodes.get(nid).vector() for node in street1_nids]
+
 
         overlapping_nodes_normalized = []
         base_node0 = self.nodes.get(overlapping_segment[0])
@@ -466,10 +467,9 @@ class OSM(Network):
             overlapping_nodes_normalized.append([slope*(x - base_node0.vector()[0]) + base_node0.vector()[1], x])
         if debug: 
             self.print_features("Point", overlapping_nodes_normalized)
-            self.print_features("Point", [self.nodes.get(node).vector()[::-1] for node in overlapping_segment])
+            #self.print_features("Point", [self.nodes.get(node).vector()[::-1] for node in overlapping_segment])
 
-        return overlapping_nodes_normalized, street1_nids, street2_nids
-
+        return overlapping_nodes_normalized, [self.nodes.get(nid).vector() for node in street1_nids], [self.nodes.get(nid).vector() for node in street1_nids]
     def merge_parallel_street_segments(self, parallel_pairs):
         """
         Note: Maybe I don't even have to merge any path (which breaks the original street network data structure.
@@ -488,15 +488,31 @@ class OSM(Network):
 
             # First find parts of the street pairs that you want to merge (you don't want to merge entire streets
             # because, for example, one could be much longer than the other and it doesn't make sense to merge
-            subset_nids, street1_segment, street2_segment = self.segment_parallel_streets((street_pair[0], street_pair[1]))
-            if not subset_nids:
+            subset_nids, street1_segment, street2_segment = self.segment_parallel_streets(street_pair)
+            if not subset_nids or len(subset_nids) == 0:
                 continue
+            # Testing
+            subset_nids = subset_nids[::-1]
+            street1_segment = street1_segment[::-1]
+            street2_segment = street2_segment[::-1]
+            if debug: self.print_features("Point", chain(street1_segment, subset_nids, street2_segment))
+            nodes = []
+            for node in chain(street1_segment, subset_nids, street2_segment):
+                #print node
+                n = Node(None, *node)
+                nodes.append(n)
+                self.add_node(n)
+            self.add_way(Street(None, [node.id for node in nodes]))
+            for street in pair:
+                self.remove_way(street)
+        return
 
+        if False: # dead code
             # Get two parallel segments and the distance between them
-            street1_node = self.nodes.get(street1_segment[1][0])
-            street2_node = self.nodes.get(street2_segment[1][0])
-            street1_end_node = self.nodes.get(street1_segment[1][-1])
-            street2_end_node = self.nodes.get(street2_segment[1][-1])
+            street1_node = self.nodes.get(street1_segment[0])
+            street2_node = self.nodes.get(street2_segment[0])
+            street1_end_node = self.nodes.get(street1_segment[-1])
+            street2_end_node = self.nodes.get(street2_segment[-1])
 
             LS_street1 = LineString((street1_node.location(), street1_end_node.location()))
             LS_street2 = LineString((street2_node.location(), street2_end_node.location()))
