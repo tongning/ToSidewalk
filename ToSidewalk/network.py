@@ -93,7 +93,27 @@ class Network(object):
         intersection_node_ids = [node.id for node in node_list if node.is_intersection()]
         self.ways.set_intersection_node_ids(intersection_node_ids)
         return
-
+    def print_features(self, type, lines):
+        geojson = {
+                  "type": "FeatureCollection"
+                , "features": []
+                }
+        for line in lines:
+            id = str(random.randrange(0, 10000000))
+            feature = {
+                      "geometry": {
+                                "type": type
+                              , "coordinates": list(line)
+                            }
+                    , "type": "Feature"
+                    , "properties": {
+                                "stroke": "#111111"
+                              , "type": "footway"
+                              , "id": id
+                              , "user": "test"}
+                    , "id": "way/" + id}
+            geojson["features"].append(feature)
+        print(json.dumps(geojson))
     def remove_node(self, nid):
         node = self.nodes.get(nid)
         for way_id in node.way_ids:
@@ -328,28 +348,9 @@ class OSM(Network):
             poly.angle = math.degrees(math.atan2(vector[0], vector[1]))
             poly.nids = set((start_node_id, end_node_id))
             street_polygons.append(poly)
-        if debug:
-            geojson = {
-                      "type": "FeatureCollection"
-                    , "features": []
-                    }
-            for line in lines:
-                id = str(random.randrange(0, 10000000))
-                feature = {
-                          "geometry": {
-                                  "type": "LineString"
-                                  , "coordinates": list(line)
-                                }
-                        , "type": "Feature"
-                        , "properties": {
-                                  "stroke": "#111111"
-                                  , "type": "footway"
-                                  , "id": id
-                                  , "user": "test"}
-                        , "id": "way/" + id}
-                geojson["features"].append(feature)
-            print(json.dumps(geojson))
         # Find pair of polygons that intersect each other.
+        if debug:
+            self.print_features("LineString", lines)
         polygon_combinations = combinations(street_polygons, 2)
         parallel_pairs = []
         for pair in polygon_combinations:
@@ -416,7 +417,29 @@ class OSM(Network):
                 return 0
 
         all_nodes = [self.nodes.get(nid) for nid in street_pair[0].nids] + [self.nodes.get(nid) for nid in street_pair[1].nids]
-        all_nodes = sorted(all_nodes, cmp=cmp_with_projection)
+        #all_nodes = sorted(all_nodes, cmp=cmp_with_projection)
+        test_list = []
+        for node in all_nodes:
+            slope = (base_node0.vector()[1] - base_node0.vector()[0]) / (base_node1.vector()[1] - base_node1.vector()[0])
+            # first y = slope(x-base_node0.vector()[0]) + base_node0.vector()[1]
+            # other y = (-1/slope)(x-node.vector()[0]) + node.vector()[1]
+            # Final x = (slope * x) + (slope * -1 * basenode.vector[0]) + basenode.vector[1] = (-1/slope)(x) + (-1/slope)(node.vector[0]) + node.vector[1]
+            # (slope*x) + (slope*-1*basenode.vector[0]) = (-1/slope)(x) + (-1/slope)(node.vector[0]) + (node.vector[1] - basenode.vector[1])
+            # (slope*x) - (-1/slope)(x) = (-1/slope)(node.vector[0]) + (node.vector[1] - basenode.vector[1]) - (-1*slope*basenode.vector[0])
+            # left = x ( slope * -1/slope)
+            # x = ( (-1/slope)(node.vector[0]) + (node.vector[1] - basenode.vector[1]) + (slope*basenode.vector[0]) )/(slope*-1/slope)
+            #x = ( (-1/slope)*(node.vector()[0]) + node.vector()[1] - base_node0.vector()[1] + (slope * base_node0.vector()[0]) )/(slope * -1/slope)
+            # x = ( slope * basex - invertedslope * nodex + nodey - basey ) / ( slope - invertedslope)
+            x = ( ( slope * base_node0.vector()[0]) - ((-1/slope) * node.vector()[0]) + node.vector()[1] - base_node0.vector()[1]) / (slope + 1/slope)
+            #test_list.append([x + base_node0.vector()[0], slope*(x) + base_node0.vector()[1]])
+            #print x, slope*(x - base_node0.vector()[0]) + base_node0.vector()[1]
+            #test_list.append([slope*(x - base_node0.vector()[0]) + base_node0.vector()[1], x])
+        #test_list.append([base_node0.vector()[1], base_node0.vector()[0]])
+        #test_list.append([base_node1.vector()[1], base_node1.vector()[0]])
+        for nid in street_pair[0].nids:
+            test_list.append(self.nodes.get(nid).vector()[::-1])
+            
+        self.print_features("Point", test_list)
         all_nids = [node.id for node in all_nodes]
 
         # Condition in list comprehension
@@ -426,11 +449,11 @@ class OSM(Network):
 
         # Find the first occurence of an element in a list
         # http://stackoverflow.com/questions/9868653/find-first-list-item-that-matches-criteria
-        begin_idx = all_nids_street_switch.index(next(x for x in all_nids_street_switch if x == True))
+        begin_idx = all_nids_street_switch.index(next(x for x in all_nids_street_switch if x))
 
         # Find the last occurence of an element in a list
         # http://stackoverflow.com/questions/6890170/how-to-find-the-last-occurrence-of-an-item-in-a-python-list
-        end_idx = (len(all_nids_street_switch) - 1) - all_nids_street_switch[::-1].index(next(x for x in all_nids_street_switch if x == True))
+        end_idx = (len(all_nids_street_switch) - 1) - all_nids_street_switch[::-1].index(next(x for x in all_nids_street_switch if x))
 
         overlapping_segment = all_nids[begin_idx:end_idx]
 
