@@ -329,20 +329,40 @@ class OSM(Network):
         parallel_pairs = []
         # All possible pairs are stored for debugging purposes
         all_pairs = []
+
+        # Todo: change the variable name pair to pair_poly
         for pair in polygon_combinations: # pair[0] and pair[1] are polygons
             # Add the pair to the list of all possible pairs for debug, but limit size to 50
             if len(all_pairs)<50:
                 all_pairs.append((street_polygons.index(pair[0]), street_polygons.index(pair[1])))
-            angle_diff = ((pair[0].angle - pair[1].angle) + 360.) % 180.
 
-            if pair[0].intersects(pair[1]) and angle_diff < 10.:
+            # Get node id of street being checked
+            #log.debug("currently checking: ")
+            street1 = streets[street_polygons.index(pair[0])]
+            street2 = streets[street_polygons.index(pair[1])]
+            if (street1.nids[0]=='49788018' or street1.nids[-1] == '49788018') and (street2.nids[0]=='2428508041' or street2.nids[-1] == '2428508041'):
+                log.debug("I am comparing the two segments of maryland ave!")
+                angle_diff_debug = ((pair[0].angle - pair[1].angle) + 360.) % 180.
+                log.debug("angle diff for maryland ave is " + str(angle_diff_debug))
+                log.debug("overlap")
+                log.debug(pair[0].intersects(pair[1]))
+            #log.debug("Street 1 ends at node "+str(street1.nids[-1]))
+
+            angle_diff = ((pair[0].angle - pair[1].angle) + 360.) % 180.
+            if pair[0].intersects(pair[1]) and (angle_diff < 10. or angle_diff>170.):
                 # If the polygon intersects, and they have a kind of similar angle, and they don't share a node,
                 # then they should be merged together.
                 parallel_pairs.append((street_polygons.index(pair[0]), street_polygons.index(pair[1])))
         # Debug: Perform filtering operation for all pairs
         filtered_all_pairs_debug = []
-        for pair in all_pairs: # pair[0] and pair[1] are ints
 
+        #Filter all_pairs and store in filtered_all_pairs_debug
+        for pair in all_pairs: # pair[0] and pair[1] are ints
+            #Print node IDs
+            log.debug("Debug - print node IDs")
+            log.debug(str(pair[0]) + " " + str(pair[1]))
+
+            log.debug("Finished printing node IDs")
             street_pair = (streets[pair[0]], streets[pair[1]])
             shared_nids = set(street_pair[0].nids) & set(street_pair[1].nids)
 
@@ -373,7 +393,7 @@ class OSM(Network):
             filtered_all_pairs_debug.append(pair)
         filtered_parallel_pairs = []
 
-        #
+        #Filter parallel_pairs and store in filtered_parallel_pairs
         for pair in parallel_pairs:
             street_pair = (streets[pair[0]], streets[pair[1]])
             shared_nids = set(street_pair[0].nids) & set(street_pair[1].nids)
@@ -406,7 +426,7 @@ class OSM(Network):
 
 
         log.debug("Debug")
-        for pair in filtered_all_pairs_debug:
+        for pair in filtered_parallel_pairs:
             log.debug(streets[pair[0]])
             log.debug((streets[pair[0]].id, streets[pair[1]].id))
         log.debug("End debug")
