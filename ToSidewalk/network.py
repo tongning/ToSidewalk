@@ -328,13 +328,12 @@ class OSM(Network):
         # Create a list for storing parallel pairs
         parallel_pairs = []
         # All possible pairs are stored for debugging purposes
-        all_pairs = []
+
 
         # Todo: change the variable name pair to pair_poly
         for pair in polygon_combinations: # pair[0] and pair[1] are polygons
             # Add the pair to the list of all possible pairs for debug, but limit size to 50
-            if len(all_pairs)<50:
-                all_pairs.append((street_polygons.index(pair[0]), street_polygons.index(pair[1])))
+
 
             # Get node id of street being checked
             #log.debug("currently checking: ")
@@ -354,43 +353,7 @@ class OSM(Network):
                 # then they should be merged together.
                 parallel_pairs.append((street_polygons.index(pair[0]), street_polygons.index(pair[1])))
         # Debug: Perform filtering operation for all pairs
-        filtered_all_pairs_debug = []
 
-        #Filter all_pairs and store in filtered_all_pairs_debug
-        for pair in all_pairs: # pair[0] and pair[1] are ints
-            #Print node IDs
-            log.debug("Debug - print node IDs")
-            log.debug(str(pair[0]) + " " + str(pair[1]))
-
-            log.debug("Finished printing node IDs")
-            street_pair = (streets[pair[0]], streets[pair[1]])
-            shared_nids = set(street_pair[0].nids) & set(street_pair[1].nids)
-
-            # Find the adjacent nodes for the shared node
-            if len(shared_nids) > 0:
-                # Two paths merges at one node
-                shared_nid = list(shared_nids)[0]
-                shared_node = self.nodes.get(shared_nid)
-                idx1 = street_pair[0].nids.index(shared_nid)
-                idx2 = street_pair[1].nids.index(shared_nid)
-
-                # Nodes are sorted by longitude (x-axis), so two paths should merge at the left-most node or the
-                # right most node.
-                if idx1 == 0 and idx2 == 0:
-                    adj_nid1 = street_pair[0].nids[1]
-                    adj_nid2 = street_pair[1].nids[1]
-                else:
-                    adj_nid1 = street_pair[0].nids[-2]
-                    adj_nid2 = street_pair[1].nids[-2]
-
-                adj_node1 = self.nodes.get(adj_nid1)
-                adj_node2 = self.nodes.get(adj_nid2)
-                angle_to_node1 = math.degrees(shared_node.angle_to(adj_node1))
-                angle_to_node2 = math.degrees(shared_node.angle_to(adj_node2))
-                if ((angle_to_node1 - angle_to_node2) + 360.) % 180. > 90:
-                    # Paths are connected but they are not parallel lines
-                    continue
-            filtered_all_pairs_debug.append(pair)
         filtered_parallel_pairs = []
 
         #Filter parallel_pairs and store in filtered_parallel_pairs
