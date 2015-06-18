@@ -343,6 +343,9 @@ class OSM(Network):
             if (street1.nids[0]=='1484481958' or street1.nids[-1] == '1484481958') and (street2.nids[0]=='637994525' or street2.nids[-1] == '637994525'):
 
                 log.debug("I am comparing the two segments of benning road!")
+                log.debug("Street 1 is " + street1.nids[0] + " to " + street1.nids[-1])
+                log.debug("Street 2 is " + street2.nids[0] + " to " + street2.nids[-1])
+
                 angle_diff_debug = ((pair[0].angle - pair[1].angle) + 360.) % 180.
                 log.debug("angle diff for benning rd is " + str(angle_diff_debug))
                 log.debug("overlap")
