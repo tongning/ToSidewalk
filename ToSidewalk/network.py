@@ -113,7 +113,7 @@ class Network(object):
                               , "user": "test"}
                     , "id": "way/" + id}
             geojson["features"].append(feature)
-        print(json.dumps(geojson))
+        print json.dumps(geojson)
     def remove_node(self, nid):
         node = self.nodes.get(nid)
         for way_id in node.way_ids:
@@ -354,8 +354,8 @@ class OSM(Network):
         polygon_combinations = combinations(street_polygons, 2)
         parallel_pairs = []
         for pair in polygon_combinations:
-            angle_diff = ((pair[0].angle - pair[1].angle) + 360.) % 180.
-            if pair[0].intersects(pair[1]) and angle_diff < 10.:
+            angle_diff = ((pair[0].angle - pair[1].angle))
+            if pair[0].intersects(pair[1]) and angle_diff < 10. and angle_diff > -10.:
                 # If the polygon intersects, and they have a kind of similar angle, and they don't share a node,
                 # then they should be merged together.
                 parallel_pairs.append((street_polygons.index(pair[0]), street_polygons.index(pair[1])))
@@ -402,8 +402,8 @@ class OSM(Network):
         """
         # Take the two points from street_pair[0], and use it as a base vector.
         # Project all the points along the base vector and sort them.
-        base_node0 = self.nodes.get(street_pair[0].nids[0])
-        base_node1 = self.nodes.get(street_pair[0].nids[-1])
+        base_node0 = self.nodes.get(street_pair[0].nids[-1])
+        base_node1 = self.nodes.get(street_pair[1].nids[0])
         base_vector = base_node0.vector_to(base_node1, normalize=True)
 
         def cmp_with_projection(n1, n2):
@@ -420,7 +420,7 @@ class OSM(Network):
         #all_nodes = sorted(all_nodes, cmp=cmp_with_projection)
         test_list = []
         for node in all_nodes:
-            slope = (base_node0.vector()[1] - base_node0.vector()[0]) / (base_node1.vector()[1] - base_node1.vector()[0])
+            slope = (base_node1.vector()[1] - base_node0.vector()[1]) / (base_node1.vector()[0] - base_node0.vector()[0])
             # first y = slope(x-base_node0.vector()[0]) + base_node0.vector()[1]
             # other y = (-1/slope)(x-node.vector()[0]) + node.vector()[1]
             # Final x = (slope * x) + (slope * -1 * basenode.vector[0]) + basenode.vector[1] = (-1/slope)(x) + (-1/slope)(node.vector[0]) + node.vector[1]
@@ -431,14 +431,8 @@ class OSM(Network):
             #x = ( (-1/slope)*(node.vector()[0]) + node.vector()[1] - base_node0.vector()[1] + (slope * base_node0.vector()[0]) )/(slope * -1/slope)
             # x = ( slope * basex - invertedslope * nodex + nodey - basey ) / ( slope - invertedslope)
             x = ( ( slope * base_node0.vector()[0]) - ((-1/slope) * node.vector()[0]) + node.vector()[1] - base_node0.vector()[1]) / (slope + 1/slope)
-            #test_list.append([x + base_node0.vector()[0], slope*(x) + base_node0.vector()[1]])
             #print x, slope*(x - base_node0.vector()[0]) + base_node0.vector()[1]
-            #test_list.append([slope*(x - base_node0.vector()[0]) + base_node0.vector()[1], x])
-        #test_list.append([base_node0.vector()[1], base_node0.vector()[0]])
-        #test_list.append([base_node1.vector()[1], base_node1.vector()[0]])
-        for nid in street_pair[0].nids:
-            test_list.append(self.nodes.get(nid).vector()[::-1])
-            
+            test_list.append([slope*(x - base_node0.vector()[0]) + base_node0.vector()[1], x])
         self.print_features("Point", test_list)
         all_nids = [node.id for node in all_nodes]
 
