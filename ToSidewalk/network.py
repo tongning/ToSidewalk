@@ -303,7 +303,7 @@ class OSM(Network):
         """
         streets = self.ways.get_list()
         street_polygons = []
-        distance_to_sidewalk = 0.00005
+        distance_to_sidewalk = 0.00009
 
         for street in streets:
             start_node_id = street.get_node_ids()[0]
@@ -338,22 +338,27 @@ class OSM(Network):
             # Get node id of street being checked
             #log.debug("currently checking: ")
             street1 = streets[street_polygons.index(pair[0])]
+
             street2 = streets[street_polygons.index(pair[1])]
             #if (street1.nids[0]=='49788018' or street1.nids[-1] == '49788018') and (street2.nids[0]=='2428508041' or street2.nids[-1] == '2428508041'):
-            if (street1.nids[0]=='49718930' or street1.nids[-1] == '49718930') and (street2.nids[0]=='49718930' or street2.nids[-1] == '49718930'):
+            if (street2.nids[0]=='1484481958' or street2.nids[-1] == '1484481958') and (street1.nids[0]=='637994525' or street1.nids[-1] == '637994525'):
 
-                log.debug("I am comparing the two segments of G street northeast!")
+                log.debug("I am comparing the two segments of benning rd!")
                 log.debug("Street 1 is " + street1.nids[0] + " to " + street1.nids[-1])
                 log.debug("Street 2 is " + street2.nids[0] + " to " + street2.nids[-1])
 
                 angle_diff_debug = ((pair[0].angle - pair[1].angle) + 360.) % 180.
-                log.debug("angle diff for G street northeast is " + str(angle_diff_debug))
+                log.debug("angle diff for benning rd is " + str(angle_diff_debug))
                 log.debug("overlap")
                 log.debug(pair[0].intersects(pair[1]))
+                log.debug("Length difference percentage is " + str(abs(street1.get_length() - street2.get_length()) / street1.get_length()))
             #log.debug("Street 1 ends at node "+str(street1.nids[-1]))
 
+            # Check if the length of street 1 is within 20% of the length of street 2
+            percent_length_difference = abs(street1.get_length() - street2.get_length()) / street1.get_length()
+
             angle_diff = ((pair[0].angle - pair[1].angle) + 360.) % 180.
-            if pair[0].intersects(pair[1]) and (angle_diff < 10. or angle_diff>160.):
+            if pair[0].intersects(pair[1]) and (angle_diff < 10. or angle_diff>160.) and (percent_length_difference<0.2):
                 # If the polygon intersects, and they have a kind of similar angle, and they don't share a node,
                 # then they should be merged together.
                 parallel_pairs.append((street_polygons.index(pair[0]), street_polygons.index(pair[1])))
@@ -362,6 +367,7 @@ class OSM(Network):
         filtered_parallel_pairs = []
 
         #Filter parallel_pairs and store in filtered_parallel_pairs
+        parallel_pairs.pop()
         for pair in parallel_pairs:
             street_pair = (streets[pair[0]], streets[pair[1]])
             street1 = streets[pair[0]]

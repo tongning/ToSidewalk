@@ -1,5 +1,5 @@
 import json
-
+import numpy as np
 class Way(object):
     def __init__(self, wid=None, nids=(), type=None):
         if wid is None:
@@ -110,6 +110,18 @@ class Street(Way):
 
     def get_sidewalk_ids(self):
         return self.sidewalk_ids
+
+    def get_length(self):
+        # Calculate the length of a street by retrieving the start and end nodes, constructing a vector between them,
+        # and finding the length of the vector.
+
+        # self.get_node_ids() will return node ids, but we need node objects so we retrieve the node
+        # objects from the parent way and parent network. Maybe there's a better way to do this?
+        start_node = self.parent_ways.parent_network.nodes.get(self.get_node_ids()[0])
+        end_node = self.parent_ways.parent_network.nodes.get(self.get_node_ids()[-1])
+        vec = np.array(start_node.location()) - np.array(end_node.location())
+        distance = abs(vec[-1] - vec[0])
+        return distance
 
 class Streets(Ways):
     def __init__(self):
