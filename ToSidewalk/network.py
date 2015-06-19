@@ -367,7 +367,7 @@ class OSM(Network):
         filtered_parallel_pairs = []
 
         #Filter parallel_pairs and store in filtered_parallel_pairs
-        parallel_pairs.pop()
+
         for pair in parallel_pairs:
             street_pair = (streets[pair[0]], streets[pair[1]])
             street1 = streets[pair[0]]
