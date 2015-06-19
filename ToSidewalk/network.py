@@ -12,7 +12,7 @@ from utilities import window, area
 from itertools import combinations, chain
 from heapq import heappush, heappop, heapify
 
-debug = True
+debug = False
 
 class Network(object):
     def __init__(self, nodes, ways):
@@ -438,10 +438,11 @@ class OSM(Network):
         overlapping_segment = all_nids[begin_idx:end_idx]
         if all_nids[0] in street_pair[0].nids:
             street1_nids = all_nids[:begin_idx]
-            street2_nids = all_nids[begin_idx:]
+            street2_nids = all_nids[end_idx:]
         else:
-            street1_nids = all_nids[begin_idx:]
+            street1_nids = all_nids[end_idx:]
             street2_nids = all_nids[:begin_idx]
+        self.print_features("Point", [self.nodes.get(street1_nids[0]).vector()[::-1]])
 
         if begin_idx == end_idx:
             return [], [self.nodes.get(nid).vector() for node in street1_nids], [self.nodes.get(nid).vector() for node in street1_nids]
@@ -491,19 +492,20 @@ class OSM(Network):
             subset_nids, street1_segment, street2_segment = self.segment_parallel_streets(street_pair)
             if not subset_nids or len(subset_nids) == 0:
                 continue
-            # Testing
-            #assert subset_nids[0][0] > subset_nids[0][1]
             subset_nids = [nid[::-1] for nid in subset_nids]
-            if debug: self.print_features("Point", chain(street1_segment, subset_nids, street2_segment))
+            self.print_features("Point", [point[::-1] for point in street1_segment])
+            #if debug:
+            #self.print_features("Point", [point[::-1] for point in chain(street1_segment, subset_nids, street2_segment)])
+
+            for street in pair:
+                self.remove_way(street)
             nodes = []
-            for node in chain(street1_segment, subset_nids, street2_segment):
+            for node in list(chain(street1_segment, subset_nids, street2_segment)):
                 #print node
                 n = Node(None, *node)
                 nodes.append(n)
                 self.add_node(n)
             self.add_way(Street(None, [node.id for node in nodes]))
-            for street in pair:
-                self.remove_way(street)
         return
 
         if False: # dead code
