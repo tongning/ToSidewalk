@@ -2,9 +2,9 @@ from math import radians, cos, sin, asin, sqrt
 
 class LatLng(object):
     def __init__(self, lat, lng, node_id=None):
-        # TODO Is node_id used?
         self.lat = float(lat)
         self.lng = float(lng)
+        return
 
     def __eq__(self, other):
         return self.lat == other.lat and self.lng == other.lng

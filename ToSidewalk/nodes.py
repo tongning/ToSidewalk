@@ -6,6 +6,7 @@ import logging as log
 
 class Node(LatLng):
     def __init__(self, nid=None, lat=None, lng=None):
+        # self.latlng = latlng  # Note: Would it be cleaner to inherit LatLng?
         super(Node, self).__init__(lat, lng)
 
         if nid is None:
@@ -19,6 +20,7 @@ class Node(LatLng):
         self.crosswalk_distance = 0.00006
         self.parents = ()
         self.parent_nodes = None
+        return
 
     def __str__(self):
         return "Node object, id: " + str(self.id) + ", latlng: " + str(self.location())
@@ -69,8 +71,9 @@ class Node(LatLng):
         return len(self.way_ids) >= self.min_intersection_cardinality
 
     def remove_way_id(self, wid):
-        assert(wid in self.way_ids)
-        self.way_ids.remove(wid)
+        if wid in self.way_ids:
+            self.way_ids.remove(wid)
+        return
 
     def vector(self):
         return np.array(self.location())
@@ -87,10 +90,12 @@ class Nodes(object):
         self.nodes = {}
         self.crosswalk_node_ids = []
         self.parent_network = None
+        return
 
     def add(self, node):
         node.parent_nodes = self
         self.nodes[node.id] = node
+        return
 
     def belongs_to(self):
         return self.parent_network
@@ -110,12 +115,15 @@ class Nodes(object):
     def remove(self, nid):
         # http://stackoverflow.com/questions/5844672/delete-an-element-from-a-dictionary
         del self.nodes[nid]
+        return
 
     def update(self, nid, new_node):
         self.nodes[nid] = new_node
+        return
 
 def print_intersections(nodes):
     for node in nodes.get_list():
         if node.is_intersection():
             location = node.latlng.location(radian=False)
             log.debug(str(location[0]) + "," + str(location[1]))
+    return

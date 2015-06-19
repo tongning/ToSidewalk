@@ -91,6 +91,7 @@ class Ways(object):
     def remove(self, wid):
         # http://stackoverflow.com/questions/5844672/delete-an-element-from-a-dictionary
         del self.ways[wid]
+        return
 
     def set_intersection_node_ids(self, nids):
         self.intersection_node_ids = nids
@@ -121,6 +122,7 @@ class Sidewalk(Way):
     def set_street_id(self, street_id):
         """  Set the parent street id """
         self.street_id = street_id
+        return
 
 class Sidewalks(Ways):
     def __init__(self):
