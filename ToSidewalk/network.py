@@ -2,15 +2,17 @@ from xml.etree import cElementTree as ET
 from shapely.geometry import Polygon, Point, LineString
 import json
 import logging as log
-import math
+import math, random
 import numpy as np
 
 from nodes import Node, Nodes
 from ways import Street, Streets
 from utilities import window, area
 
-from itertools import combinations
+from itertools import combinations, chain
 from heapq import heappush, heappop, heapify
+
+debug = False
 
 class Network(object):
     def __init__(self, nodes, ways):
@@ -90,14 +92,32 @@ class Network(object):
         node_list = self.nodes.get_list()
         intersection_node_ids = [node.id for node in node_list if node.is_intersection()]
         self.ways.set_intersection_node_ids(intersection_node_ids)
-        return
-
+    def print_features(self, type, lines):
+        geojson = {
+                  "type": "FeatureCollection"
+                , "features": []
+                }
+        for line in lines:
+            id = str(random.randrange(0, 10000000))
+            feature = {
+                      "geometry": {
+                                "type": type
+                              , "coordinates": list(line)
+                            }
+                    , "type": "Feature"
+                    , "properties": {
+                                "stroke": "#111111"
+                              , "type": "footway"
+                              , "id": id
+                              , "user": "test"}
+                    , "id": "way/" + id}
+            geojson["features"].append(feature)
+        print json.dumps(geojson)
     def remove_node(self, nid):
         node = self.nodes.get(nid)
         for way_id in node.way_ids:
             self.ways.get(way_id).remove_node(nid)
         self.nodes.remove(nid)
-        return
 
     def remove_way(self, way_id):
         """
@@ -126,7 +146,6 @@ class Network(object):
             for way_id in node.way_ids:
                 self.ways.get(way_id).swap_nodes(nid_from, nid_to)
             self.nodes.remove(nid_from)
-        return
 
 class OSM(Network):
 
@@ -159,7 +178,6 @@ class OSM(Network):
         for way in self.ways.get_list():
             if len(way.nids) < 2:
                 self.remove_way(way.id)
-        return
 
     def clean_street_segmentation(self):
         """
@@ -188,7 +206,6 @@ class OSM(Network):
                 self.remove_way(way_id_1)
                 self.remove_way(way_id_2)
 
-        return
 
     def export(self, format="geojson"):
         """
@@ -294,8 +311,6 @@ class OSM(Network):
                 else:
                     break
 
-        return
-
     def find_parallel_street_segments(self):
         """
         This method finds parallel segments and returns a list of pair of way ids
@@ -303,7 +318,9 @@ class OSM(Network):
         """
         streets = self.ways.get_list()
         street_polygons = []
+
         distance_to_sidewalk = 0.00005
+        lines = []
 
         for street in streets:
             start_node_id = street.get_node_ids()[0]
@@ -317,16 +334,22 @@ class OSM(Network):
             p2 = end_node.vector() + perpendicular
             p3 = end_node.vector() - perpendicular
             p4 = start_node.vector() - perpendicular
-
+            if debug:
+                lines.append([list(p1)[::-1], list(p2)[::-1]])
+                lines.append([list(p2)[::-1], list(p3)[::-1]])
+                lines.append([list(p3)[::-1], list(p4)[::-1]])
+                lines.append([list(p4)[::-1], list(p1)[::-1]])
             poly = Polygon([p1, p2, p3, p4])
             poly.angle = math.degrees(math.atan2(vector[0], vector[1]))
             poly.nids = set((start_node_id, end_node_id))
             street_polygons.append(poly)
-
         # Find pair of polygons that intersect each other.
+        if debug:
+            self.print_features("LineString", lines)
         polygon_combinations = combinations(street_polygons, 2)
         # Create a list for storing parallel pairs
         parallel_pairs = []
+
         # All possible pairs are stored for debugging purposes
 
 
@@ -354,6 +377,8 @@ class OSM(Network):
 
             angle_diff = ((pair[0].angle - pair[1].angle) + 360.) % 180.
             if pair[0].intersects(pair[1]) and (angle_diff < 10. or angle_diff>160.):
+
+
                 # If the polygon intersects, and they have a kind of similar angle, and they don't share a node,
                 # then they should be merged together.
                 parallel_pairs.append((street_polygons.index(pair[0]), street_polygons.index(pair[1])))
@@ -422,10 +447,20 @@ class OSM(Network):
         """
         # Take the two points from street_pair[0], and use it as a base vector.
         # Project all the points along the base vector and sort them.
-        base_node0 = self.nodes.get(street_pair[0].nids[0])
-        base_node1 = self.nodes.get(street_pair[0].nids[-1])
+        street0_node0 = self.nodes.get(street_pair[0].nids[0])
+        street0_node1 = self.nodes.get(street_pair[0].nids[-1])
+        street1_node0 = self.nodes.get(street_pair[1].nids[0])
+        street1_node1 = self.nodes.get(street_pair[1].nids[-1])
+        p1 = street0_node0.vector_to(street1_node1)
+        p2 = street0_node1.vector_to(street1_node0)
+        if abs(p1[1] - p1[0]) > abs(p2[1] - p2[0]):
+            base_node0 = street0_node0
+            base_node1 = street1_node1
+        else:
+            base_node0 = street0_node1
+            base_node1 = street1_node0
+        base_node1 = self.nodes.get(street_pair[1].nids[0])
         base_vector = base_node0.vector_to(base_node1, normalize=True)
-
         def cmp_with_projection(n1, n2):
             dot_product1 = np.dot(n1.vector(), base_vector)
             dot_product2 = np.dot(n2.vector(), base_vector)
@@ -443,57 +478,51 @@ class OSM(Network):
         # Condition in list comprehension
         # http://stackoverflow.com/questions/4260280/python-if-else-in-list-comprehension
         all_nids_street_indices = [0 if nid in street_pair[0].nids else 1 for nid in all_nids]
+        # all_nids_street_indices is now a list parallel to all_nids where the value is 1 if the corrisponding value belongs to the first street
+        # on [a, b, c, d, ...] returns (a, b), (b, c), (c, d) ....
+        # for each pair, store false if the parent streets are equal
+        # Because of the way window works, the length of this list will always be one minus the length of all_nids_street_indices
         all_nids_street_switch = [idx_pair[0] != idx_pair[1] for idx_pair in window(all_nids_street_indices, 2)]
 
-        # Find the first occurence of an element in a list
-        # http://stackoverflow.com/questions/9868653/find-first-list-item-that-matches-criteria
-        begin_idx = all_nids_street_switch.index(next(x for x in all_nids_street_switch if x == True))
-
-        # Find the last occurence of an element in a list
-        # http://stackoverflow.com/questions/6890170/how-to-find-the-last-occurrence-of-an-item-in-a-python-list
-        end_idx = (len(all_nids_street_switch) - 1) - all_nids_street_switch[::-1].index(next(x for x in all_nids_street_switch if x == True))
+        begin_idx = all_nids_street_switch.index(True) # Gets index of first True in the list
+        end_idx = len(all_nids_street_switch) - 1 - all_nids_street_switch[::-1].index(True) # Gets index of last True in the list
 
         overlapping_segment = all_nids[begin_idx:end_idx]
-
-        begin_nid = all_nids[begin_idx]
-        if begin_nid in street_pair[0].nids:
-            street1_begin_nid = begin_nid
-            street2_begin_nid = all_nids[begin_idx + 1]
+        if all_nids[0] in street_pair[0].nids:
+            street1_nids = all_nids[:begin_idx]
+            street2_nids = all_nids[end_idx:]
         else:
-            street1_begin_nid = all_nids[begin_idx + 1]
-            street2_begin_nid = begin_nid
-        street1_begin_idx = street_pair[0].nids.index(street1_begin_nid)
-        street2_begin_idx = street_pair[1].nids.index(street2_begin_nid)
+            street1_nids = all_nids[end_idx:]
+            street2_nids = all_nids[:begin_idx]
+        self.print_features("Point", [self.nodes.get(street1_nids[0]).vector()[::-1]])
 
-        end_nid = all_nids[end_idx]
-        if end_nid in street_pair[0].nids:
-            street1_end_nid = end_nid
-            street2_end_nid = all_nids[end_idx + 1]
-        else:
-            street1_end_nid = all_nids[end_idx + 1]
-            street2_end_nid = end_nid
-        street1_end_idx = street_pair[0].nids.index(street1_end_nid)
-        street2_end_idx = street_pair[1].nids.index(street2_end_nid)
+        if begin_idx == end_idx:
+            return [], [self.nodes.get(nid).vector() for node in street1_nids], [self.nodes.get(nid).vector() for node in street1_nids]
 
-        street1_segmentation = [street_pair[0].nids[:street1_begin_idx],
-                                street_pair[0].nids[street1_begin_idx:street1_end_idx + 1],
-                                street_pair[0].nids[street1_end_idx + 1:]]
-        street2_segmentation = [street_pair[1].nids[:street2_begin_idx],
-                                street_pair[1].nids[street2_begin_idx:street2_end_idx + 1],
-                                street_pair[1].nids[street2_end_idx + 1:]]
 
-        if street1_segmentation[0]:
-            street1_segmentation[0].append(street1_segmentation[1][0])
-        if street1_segmentation[2]:
-            street1_segmentation[2].insert(0, street1_segmentation[1][-1])
+        overlapping_nodes_normalized = []
+        base_node0 = self.nodes.get(overlapping_segment[0])
+        base_node1 = self.nodes.get(overlapping_segment[-1])
+        for nid in overlapping_segment:
+            node = self.nodes.get(nid)
+            slope = (base_node1.vector()[1] - base_node0.vector()[1]) / (base_node1.vector()[0] - base_node0.vector()[0])
+            # first y = slope(x-base_node0.vector()[0]) + base_node0.vector()[1]
+            # other y = (-1/slope)(x-node.vector()[0]) + node.vector()[1]
+            # Final x = (slope * x) + (slope * -1 * basenode.vector[0]) + basenode.vector[1] = (-1/slope)(x) + (-1/slope)(node.vector[0]) + node.vector[1]
+            # (slope*x) + (slope*-1*basenode.vector[0]) = (-1/slope)(x) + (-1/slope)(node.vector[0]) + (node.vector[1] - basenode.vector[1])
+            # (slope*x) - (-1/slope)(x) = (-1/slope)(node.vector[0]) + (node.vector[1] - basenode.vector[1]) - (-1*slope*basenode.vector[0])
+            # left = x ( slope * -1/slope)
+            # x = ( (-1/slope)(node.vector[0]) + (node.vector[1] - basenode.vector[1]) + (slope*basenode.vector[0]) )/(slope*-1/slope)
+            #x = ( (-1/slope)*(node.vector()[0]) + node.vector()[1] - base_node0.vector()[1] + (slope * base_node0.vector()[0]) )/(slope * -1/slope)
+            # x = ( slope * basex - invertedslope * nodex + nodey - basey ) / ( slope - invertedslope)
+            x = ( ( slope * base_node0.vector()[0]) - ((-1/slope) * node.vector()[0]) + node.vector()[1] - base_node0.vector()[1]) / (slope + 1/slope)
+            #print x, slope*(x - base_node0.vector()[0]) + base_node0.vector()[1]
+            overlapping_nodes_normalized.append([slope*(x - base_node0.vector()[0]) + base_node0.vector()[1], x])
+        if debug: 
+            self.print_features("Point", overlapping_nodes_normalized)
+            #self.print_features("Point", [self.nodes.get(node).vector()[::-1] for node in overlapping_segment])
 
-        if street2_segmentation[0]:
-            street2_segmentation[0].append(street2_segmentation[1][0])
-        if street2_segmentation[2]:
-            street2_segmentation[2].insert(0, street2_segmentation[1][-1])
-
-        return overlapping_segment, street1_segmentation, street2_segmentation
-
+        return overlapping_nodes_normalized, [self.nodes.get(nid).vector() for node in street1_nids], [self.nodes.get(nid).vector() for node in street1_nids]
     def merge_parallel_street_segments(self, parallel_pairs):
         """
         Note: Maybe I don't even have to merge any path (which breaks the original street network data structure.
@@ -512,15 +541,31 @@ class OSM(Network):
 
             # First find parts of the street pairs that you want to merge (you don't want to merge entire streets
             # because, for example, one could be much longer than the other and it doesn't make sense to merge
-            subset_nids, street1_segment, street2_segment = self.segment_parallel_streets((street_pair[0], street_pair[1]))
-            if not subset_nids:
+            subset_nids, street1_segment, street2_segment = self.segment_parallel_streets(street_pair)
+            if not subset_nids or len(subset_nids) == 0:
                 continue
+            subset_nids = [nid[::-1] for nid in subset_nids]
+            self.print_features("Point", [point[::-1] for point in street1_segment])
+            #if debug:
+            #self.print_features("Point", [point[::-1] for point in chain(street1_segment, subset_nids, street2_segment)])
 
+            for street in pair:
+                self.remove_way(street)
+            nodes = []
+            for node in list(chain(street1_segment, subset_nids, street2_segment)):
+                #print node
+                n = Node(None, *node)
+                nodes.append(n)
+                self.add_node(n)
+            self.add_way(Street(None, [node.id for node in nodes]))
+        return
+
+        if False: # dead code
             # Get two parallel segments and the distance between them
-            street1_node = self.nodes.get(street1_segment[1][0])
-            street2_node = self.nodes.get(street2_segment[1][0])
-            street1_end_node = self.nodes.get(street1_segment[1][-1])
-            street2_end_node = self.nodes.get(street2_segment[1][-1])
+            street1_node = self.nodes.get(street1_segment[0])
+            street2_node = self.nodes.get(street2_segment[0])
+            street1_end_node = self.nodes.get(street1_segment[-1])
+            street2_end_node = self.nodes.get(street2_segment[-1])
 
             LS_street1 = LineString((street1_node.location(), street1_end_node.location()))
             LS_street2 = LineString((street2_node.location(), street2_end_node.location()))
@@ -652,7 +697,6 @@ class OSM(Network):
 
         for street_id in set(streets_to_remove):
             self.remove_way(street_id)
-        return
 
     def simplify(self, way_id, threshold=0.5):
         """
@@ -668,7 +712,7 @@ class OSM(Network):
         # Python heap
         # http://stackoverflow.com/questions/12749622/creating-a-heap-in-python
         # http://stackoverflow.com/questions/3954530/how-to-make-heapq-evaluate-the-heap-off-of-a-specific-attribute
-        class triangle(object):
+        class triangle():
             def __init__(self, prev_idx, idx, next_idx):
                 self.idx = idx
                 self.prev_idx = idx - 1
@@ -717,8 +761,6 @@ class OSM(Network):
         new_nids.append(nodes[-1].id)
         self.ways.get(way_id).nids = new_nids
 
-        return
-
     def split_streets(self):
         """
         Split ways into segments at intersections
@@ -752,8 +794,6 @@ class OSM(Network):
                     self.add_way(new_way)
                     self.remove_way(way.id)
         # self.ways = new_streets
-
-        return
 
     def update_ways(self):
         # Update the way_ids
@@ -809,7 +849,6 @@ def parse_intersections(nodes, ways):
     node_list = nodes.get_list()
     intersection_node_ids = [node.id for node in node_list if node.is_intersection()]
     ways.set_intersection_node_ids(intersection_node_ids)
-    return
 
 
 if __name__ == "__main__":

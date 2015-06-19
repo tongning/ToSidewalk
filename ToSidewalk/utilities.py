@@ -38,4 +38,3 @@ def window(seq, n=2, padding=None):
     for elem in it:
         result = result[1:] + (elem,)
         yield result
-    return
