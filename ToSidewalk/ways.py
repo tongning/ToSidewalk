@@ -1,5 +1,5 @@
 import json
-
+import numpy as np
 class Way(object):
     def __init__(self, wid=None, nids=(), type=None):
         if wid is None:
@@ -110,6 +110,13 @@ class Street(Way):
 
     def get_sidewalk_ids(self):
         return self.sidewalk_ids
+
+    def get_length(self):
+        start_node = self.parent_ways.parent_network.nodes.get(self.get_node_ids()[0])
+        end_node = self.parent_ways.parent_network.nodes.get(self.get_node_ids()[-1])
+        vec = np.array(start_node.location()) - np.array(end_node.location())
+        length = abs(vec[0] - vec[-1])
+        return length
 
 class Streets(Ways):
     def __init__(self):
