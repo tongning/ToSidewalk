@@ -20,6 +20,7 @@ class Node(LatLng):
         self.crosswalk_distance = 0.00006
         self.parents = ()
         self.parent_nodes = None
+        self.confirmed = False
         return
 
     def __str__(self):

@@ -250,28 +250,79 @@ def make_crosswalks(street_network, sidewalk_network):
     return
 
 
+def merge_sidewalks(sidewalk_network1, sidewalk_network2):
+    """Returns a merged sidewalk network
+
+    Takes two sidewalk networks and merges them without duplicating sidewalk data"""
+    for node in sidewalk_network1.nodes.get_list():
+        node.confirmed = True
+
+    # add new nodes from sidewalk_network2 to sidewalk_network1
+    for sidewalk_node in sidewalk_network2.nodes.get_list():
+        in_other = False
+        same_node = None
+        for other_sidewalk_node in sidewalk_network1.nodes.get_list():
+            if sidewalk_node.location() == other_sidewalk_node.location():
+                in_other = True
+                same_node = other_sidewalk_node
+        if not in_other:
+            sidewalk_network1.add_node(sidewalk_node)
+        else:
+            sidewalk_network2.nodes.update(sidewalk_node.id, same_node)
+
+    # add new ways from sidewalk_network2 to sidewalk_network1
+    for way in sidewalk_network2.ways.get_list():
+        # ensure all ways have correct nids, if incorrect update to correct nid from network1
+        for nid in way.get_node_ids():
+            if sidewalk_network1.nodes.get(nid) is None:
+                 way.swap_nodes(nid, sidewalk_network2.nodes.get(nid).id)
+
+        has_confirmed_parents = False
+        for nid in way.get_node_ids():
+            if sidewalk_network1.nodes.get(nid).confirmed:
+                has_confirmed_parents = True
+        if not has_confirmed_parents:
+            sidewalk_network1.add_way(way)
+    return sidewalk_network1
+
 def main(street_network):
     sidewalk_network = make_sidewalks(street_network)
     make_crosswalks(street_network, sidewalk_network)
 
-    output = sidewalk_network.export(format='geojson')
-    return output
-
+    return sidewalk_network
 
 if __name__ == "__main__":
     # filename = "../resources/SimpleWay_01.osm"
     filename = "../resources/Simple4WayIntersection_01.osm"
     # filename = "../resources/SmallMap_01.osm"
+<<<<<<< HEAD
+    # filename = "../resources/ParallelLanes_03.osm"
+    # filename = "../resources/MapPair_B_01.osm"
+    # filename = "../resources/SegmentedStreet_01.osm"
+    # filename = "../resources/ParallelLanes_03.osm"
+=======
     #filename = "../resources/ParallelLanes_03.osm"
     #filename = "../resources/MapPair_B_01.osm"
     # filename = "../resources/SegmentedStreet_01.osm"
     #filename = "../resources/ParallelLanes_03.osm"
     #filename = "../resources/SmallMap_04.osm"
+>>>>>>> upstream/master
 
-    street_network = parse(filename)
-    street_network.preprocess()
-    street_network.parse_intersections()
+    filename = "../resources/MapPair_A_01.osm"
+    filename2 = "../resources/MapPair_B_01.osm"
 
-    geojson = main(street_network)
+    street_network1 = parse(filename)
+    street_network1.preprocess()
+    street_network1.parse_intersections()
+
+    street_network2 = parse(filename2)
+    street_network2.preprocess()
+    street_network2.parse_intersections()
+
+    sidewalk_network1 = main(street_network1)
+    sidewalk_network2 = main(street_network2)
+
+    merged_sidewalk_network = merge_sidewalks(sidewalk_network1, sidewalk_network2)
+    geojson = merged_sidewalk_network.export(format='geojson')
+
     print geojson
-
