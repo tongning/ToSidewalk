@@ -388,7 +388,7 @@ class OSM(Network):
         :return: A list of pair of parallel way ids
         """
 
-        #self.join_ways('6055514', '6055697')
+
         streets = self.ways.get_list()
         street_polygons = []
         distance_to_sidewalk = 0.00009
@@ -430,26 +430,12 @@ class OSM(Network):
             both_streets_oneway = False
             if(street1.get_oneway_tag() == 'yes' and street2.get_oneway_tag() == 'yes'):
                 both_streets_oneway = True
-            #log.debug(street1.get_oneway_tag())
-            #if (street1.nids[0]=='49788018' or street1.nids[-1] == '49788018') and (street2.nids[0]=='2428508041' or street2.nids[-1] == '2428508041'):
-            if (street1.nids[0]=='49718930' or street1.nids[-1] == '49718930') and (street2.nids[0]=='49718930' or street2.nids[-1] == '49718930'):
 
-                log.debug("I am comparing the two segments of G street northeast!")
-                log.debug("Street 1 is " + street1.nids[0] + " to " + street1.nids[-1])
-                log.debug("Street 2 is " + street2.nids[0] + " to " + street2.nids[-1])
-
-                angle_diff_debug = ((pair[0].angle - pair[1].angle) + 360.) % 180.
-                log.debug("angle diff for G street northeast is " + str(angle_diff_debug))
-                log.debug("overlap")
-                log.debug(pair[0].intersects(pair[1]))
-            #log.debug("Street 1 ends at node "+str(street1.nids[-1]))
             angle_diff = ((pair[0].angle - pair[1].angle) + 360.) % 180.
             if pair[0].intersects(pair[1]) and (angle_diff < 10. or angle_diff>160.) and both_streets_oneway:
                 # If the polygon intersects, and they have a kind of similar angle, and they don't share a node,
                 # then they should be merged together.
                 parallel_pairs.append((street_polygons.index(pair[0]), street_polygons.index(pair[1])))
-        # Debug: Perform filtering operation for all pairs
-
         filtered_parallel_pairs = []
 
         #Filter parallel_pairs and store in filtered_parallel_pairs
@@ -482,28 +468,10 @@ class OSM(Network):
                 adj_node2 = self.nodes.get(adj_nid2)
                 angle_to_node1 = math.degrees(shared_node.angle_to(adj_node1))
                 angle_to_node2 = math.degrees(shared_node.angle_to(adj_node2))
-                #if (street1.nids[0]=='49788018' or street1.nids[-1] == '49788018') and (street2.nids[0]=='2428508041' or street2.nids[-1] == '2428508041'):
-                if (street2.nids[0]=='1484481958' or street2.nids[-1] == '1484481958') and (street1.nids[0]=='637994525' or street1.nids[-1] == '637994525'):
-
-                    log.debug("benning road check 2")
-                    log.debug(abs(abs(angle_to_node1)-abs(angle_to_node2)))
-                    log.debug(angle_to_node1 - angle_to_node2)
-                    log.debug(str(angle_to_node1) + str(angle_to_node2))
                 if abs(abs(angle_to_node1)-abs(angle_to_node2)) > 90:
                     # Paths are connected but they are not parallel lines
-                    #if not ((street1.nids[0]=='49788018' or street1.nids[-1] == '49788018') and (street2.nids[0]=='2428508041' or street2.nids[-1] == '2428508041')):
                     continue
             filtered_parallel_pairs.append(pair)
-
-
-
-
-        #log.debug("Debug")
-        #for pair in filtered_parallel_pairs:
-        #    log.debug((streets[pair[0]].id, streets[pair[1]].id))
-        #log.debug("End debug")
-
-        #log.debug([(streets[pair[0]].id) for pair in filtered_all_pairs_debug])
         return [(streets[pair[0]].id, streets[pair[1]].id) for pair in filtered_parallel_pairs]
 
     def segment_parallel_streets(self, street_pair):
