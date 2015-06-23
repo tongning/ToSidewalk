@@ -293,20 +293,19 @@ def main(street_network):
 
 if __name__ == "__main__":
     # filename = "../resources/SimpleWay_01.osm"
-    filename = "../resources/Simple4WayIntersection_01.osm"
+    # filename = "../resources/Simple4WayIntersection_01.osm"
     # filename = "../resources/SmallMap_01.osm"
-<<<<<<< HEAD
     # filename = "../resources/ParallelLanes_03.osm"
     # filename = "../resources/MapPair_B_01.osm"
     # filename = "../resources/SegmentedStreet_01.osm"
     # filename = "../resources/ParallelLanes_03.osm"
-=======
     #filename = "../resources/ParallelLanes_03.osm"
     #filename = "../resources/MapPair_B_01.osm"
     # filename = "../resources/SegmentedStreet_01.osm"
     #filename = "../resources/ParallelLanes_03.osm"
+
     #filename = "../resources/SmallMap_04.osm"
->>>>>>> upstream/master
+    filename = "../resources/newhampshire.osm"
 
     filename = "../resources/MapPair_A_01.osm"
     filename2 = "../resources/MapPair_B_01.osm"

@@ -1,5 +1,6 @@
 import json
-
+import numpy as np
+import logging as log
 class Way(object):
     def __init__(self, wid=None, nids=(), type=None):
         if wid is None:
@@ -103,6 +104,27 @@ class Street(Way):
         super(Street, self).__init__(wid, nids, type)
         self.sidewalk_ids = []  # Keep track of which sidewalks were generated from this way
         self.distance_to_sidewalk = 0.00004
+        self.oneway = 'undefined'
+        self.ref = 'undefined'
+    def getdirection(self):
+        startnode=self.parent_ways.parent_network.nodes.get(self.get_node_ids()[0])
+        endnode=self.parent_ways.parent_network.nodes.get(self.get_node_ids()[-1])
+        startlat=startnode.lat
+        endlat = endnode.lat
+        if startlat>endlat:
+            return 1
+        else:
+            return -1
+
+    def set_oneway_tag(self, oneway_tag):
+        self.oneway = oneway_tag
+    def set_ref_tag(self, ref_tag):
+        self.ref = ref_tag
+
+    def get_oneway_tag(self):
+        return self.oneway
+    def get_ref_tag(self):
+        return self.ref
 
     def append_sidewalk_id(self, way_id):
         self.sidewalk_ids.append(way_id)
@@ -110,6 +132,13 @@ class Street(Way):
 
     def get_sidewalk_ids(self):
         return self.sidewalk_ids
+
+    def get_length(self):
+        start_node = self.parent_ways.parent_network.nodes.get(self.get_node_ids()[0])
+        end_node = self.parent_ways.parent_network.nodes.get(self.get_node_ids()[-1])
+        vec = np.array(start_node.location()) - np.array(end_node.location())
+        length = abs(vec[0] - vec[-1])
+        return length
 
 class Streets(Ways):
     def __init__(self):

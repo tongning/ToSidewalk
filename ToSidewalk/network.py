@@ -106,13 +106,35 @@ class Network(object):
         :return:
         """
         way = self.ways.get(way_id)
+
         for nid in way.get_node_ids():
             node = self.nodes.get(nid)
             node.remove_way_id(way_id)
             way_ids = node.get_way_ids()
+            # Delete the node if it is no longer associated with any ways
             if len(way_ids) == 0:
                 self.nodes.remove(nid)
         self.ways.remove(way_id)
+    def join_ways(self, way_id_1, way_id_2):
+        """
+        Join two ways together to form a single way. Intended for use when a single long street is divided
+        into multiple ways, which can cause issues with merging.
+        :param way_id_1: ID of first way to merge. Must be passed as a string.
+        :param way_id_2: ID of second way to merge. Must be passed as a string.
+        :return:
+        """
+        # Take all nodes from way 2 and add them to way 1
+        log.debug("Attempting to join ways " + way_id_1 + " and " + way_id_2 + " for merging.")
+        way2 = self.ways.get(way_id_2)
+        for nid in way2.get_node_ids():
+            # This is a node we're going to add to way 1
+            node = self.nodes.get(nid)
+            # Associate the node with way 1 and disassociate it with way 2
+
+            node.append_way(way_id_1)
+            node.remove_way_id(way_id_2)
+        # Remove way 2
+        self.ways.remove(way_id_2)
 
     def swap_nodes(self, nid_from, nid_to):
         """
@@ -138,13 +160,77 @@ class OSM(Network):
         if bounds:
             self.bounds = bounds
 
+    def join_connected_ways(self, segments_to_merge):
+        """
+        This methods searches through the pairs of ways that need to be merged, and checks to see if there
+        are any ways that appear in multiple pairs. A way that appears in multiple pairs is likely a long
+        way that needs to be merged with several short ways that run alongside it. The merge method will fail
+        in this case, so as a workaround this method will join the short ways together into a single way to
+        allow the merge method to work properly.
+        :param segments_to_merge: List of pairs of ways that need to be merged. This likely comes from
+        find_parallel_pairs().
+        :return: A new list of pairs of ways to merge. Note: A new list is necessary because once ways are joined,
+        some of the way IDs in the original list will no longer be valid.
+        """
+
+        # This list will contain the first way in each pair
+        ways_to_merge_1 = []
+        # This list will contain the second way in each pair
+        ways_to_merge_2 = []
+        # Add the ways IDs to the above lists
+        for pair in segments_to_merge:
+            ways_to_merge_1.append(int(pair[0]))
+            ways_to_merge_2.append(int(pair[1]))
+            # See if ways share a node
+        # Combine the two above lists
+        all_ways_to_merge = ways_to_merge_1 + ways_to_merge_2
+        # Using the combined list, create a set of ways that appear multiple times. These are the
+        # long ways for which multiple short ways need to be merged into.
+        ways_appearing_multiple_times = set([x for x in all_ways_to_merge if all_ways_to_merge.count(x) > 1])
+        # Once ways are joined, some way IDs will no longer exist. We need to keep track of which way IDs have
+        # been removed.
+        removed_ways = []
+
+        # For each long way, get the IDs of all the short ways that need to be merged with the long way
+        for way in ways_appearing_multiple_times:
+            # Store the IDs of the short ways in a list
+            short_ways_to_join = []
+            # Search for the ID of the long way in the two list 1, and store the associated short way (from list 2)
+            # in short_ways_to_join
+            for i,j in enumerate(ways_to_merge_1):
+                if j == way:
+                    short_ways_to_join.append(ways_to_merge_2[i])
+            # Repeat the other way around, for cases where the ID of the long way is in list 2 and the ID of the
+            # short way is in list 1.
+            for i,j in enumerate(ways_to_merge_2):
+                if j == way:
+                    short_ways_to_join.append(ways_to_merge_1[i])
+            # Go through the list of short ways that need to be joined and join them in pairs.
+            for short_way in short_ways_to_join:
+                # Don't join the first way with the first way
+                if short_way != short_ways_to_join[0]:
+                    self.join_ways(str(short_ways_to_join[0]),str(short_way))
+                    # Keep track of way IDs that are no longer valid
+                    removed_ways.append(short_way)
+        # Build new list of pairs to merge, excluding pairs with IDs that are no longer valid
+        new_segments_to_merge = []
+        for pair in segments_to_merge:
+            # If the pair contains an ID that is no longer valid, don't add it to the new list of pairs.
+            if int(pair[0]) in removed_ways or int(pair[1]) in removed_ways:
+                pass
+            else:
+                new_segments_to_merge.append(pair)
+        return new_segments_to_merge
     def preprocess(self):
         """
         Preprocess and clean up the data
         :return:
         """
         parallel_segments = self.find_parallel_street_segments()
-        self.merge_parallel_street_segments(parallel_segments)
+
+        parallel_segments_filtered = self.join_connected_ways(parallel_segments)
+
+        self.merge_parallel_street_segments(parallel_segments_filtered)
 
         self.split_streets()
         self.update_ways()
@@ -297,13 +383,16 @@ class OSM(Network):
         return
 
     def find_parallel_street_segments(self):
+
         """
         This method finds parallel segments and returns a list of pair of way ids
         :return: A list of pair of parallel way ids
         """
+
+
         streets = self.ways.get_list()
         street_polygons = []
-        distance_to_sidewalk = 0.00003
+        distance_to_sidewalk = 0.00009
 
         for street in streets:
             start_node_id = street.get_node_ids()[0]
@@ -325,17 +414,39 @@ class OSM(Network):
 
         # Find pair of polygons that intersect each other.
         polygon_combinations = combinations(street_polygons, 2)
+        # Create a list for storing parallel pairs
         parallel_pairs = []
-        for pair in polygon_combinations:
+        # All possible pairs are stored for debugging purposes
+
+
+        # Todo: change the variable name pair to pair_poly
+        for pair in polygon_combinations: # pair[0] and pair[1] are polygons
+            # Add the pair to the list of all possible pairs for debug, but limit size to 50
+
+
+            # Get node id of street being checked
+            #log.debug("currently checking: ")
+            street1 = streets[street_polygons.index(pair[0])]
+
+            street2 = streets[street_polygons.index(pair[1])]
+            both_streets_oneway = False
+            if(street1.get_oneway_tag() == 'yes' and street2.get_oneway_tag() == 'yes'):
+                both_streets_oneway = True
+            opposite_directions = False
+            if(street1.getdirection() == street2.getdirection()):
+                opposite_directions=True
             angle_diff = ((pair[0].angle - pair[1].angle) + 360.) % 180.
-            if pair[0].intersects(pair[1]) and angle_diff < 10.:
+            if pair[0].intersects(pair[1]) and (angle_diff < 10. or angle_diff>160.) and both_streets_oneway and opposite_directions:
                 # If the polygon intersects, and they have a kind of similar angle, and they don't share a node,
                 # then they should be merged together.
                 parallel_pairs.append((street_polygons.index(pair[0]), street_polygons.index(pair[1])))
-
         filtered_parallel_pairs = []
+
+        #Filter parallel_pairs and store in filtered_parallel_pairs
         for pair in parallel_pairs:
             street_pair = (streets[pair[0]], streets[pair[1]])
+            street1 = streets[pair[0]]
+            street2 = streets[pair[1]]
             shared_nids = set(street_pair[0].nids) & set(street_pair[1].nids)
 
             # Find the adjacent nodes for the shared node
@@ -349,9 +460,11 @@ class OSM(Network):
                 # Nodes are sorted by longitude (x-axis), so two paths should merge at the left-most node or the
                 # right most node.
                 if idx1 == 0 and idx2 == 0:
+                    # The case where shared node is at the left-end
                     adj_nid1 = street_pair[0].nids[1]
                     adj_nid2 = street_pair[1].nids[1]
                 else:
+                    # The case where sahred node is at the right-end
                     adj_nid1 = street_pair[0].nids[-2]
                     adj_nid2 = street_pair[1].nids[-2]
 
@@ -359,11 +472,10 @@ class OSM(Network):
                 adj_node2 = self.nodes.get(adj_nid2)
                 angle_to_node1 = math.degrees(shared_node.angle_to(adj_node1))
                 angle_to_node2 = math.degrees(shared_node.angle_to(adj_node2))
-                if ((angle_to_node1 - angle_to_node2) + 360.) % 180. > 90:
+                if abs(abs(angle_to_node1)-abs(angle_to_node2)) > 90:
                     # Paths are connected but they are not parallel lines
                     continue
             filtered_parallel_pairs.append(pair)
-
         return [(streets[pair[0]].id, streets[pair[1]].id) for pair in filtered_parallel_pairs]
 
     def segment_parallel_streets(self, street_pair):
@@ -398,11 +510,11 @@ class OSM(Network):
         all_nids_street_indices = [0 if nid in street_pair[0].nids else 1 for nid in all_nids]
         all_nids_street_switch = [idx_pair[0] != idx_pair[1] for idx_pair in window(all_nids_street_indices, 2)]
 
-        # Find the first occurence of an element in a list
+        # Find the first occurrence of an element in a list
         # http://stackoverflow.com/questions/9868653/find-first-list-item-that-matches-criteria
         begin_idx = all_nids_street_switch.index(next(x for x in all_nids_street_switch if x == True))
 
-        # Find the last occurence of an element in a list
+        # Find the last occurrence of an element in a list
         # http://stackoverflow.com/questions/6890170/how-to-find-the-last-occurrence-of-an-item-in-a-python-list
         end_idx = (len(all_nids_street_switch) - 1) - all_nids_street_switch[::-1].index(next(x for x in all_nids_street_switch if x == True))
 
@@ -744,6 +856,8 @@ def parse(filename):
     valid_highways = {'primary', 'secondary', 'tertiary', 'residential'}
     for way in ways_tree:
         highway_tag = way.find(".//tag[@k='highway']")
+        oneway_tag = way.find(".//tag[@k='oneway']")
+        ref_tag = way.find(".//tag[@k='ref']")
         if highway_tag is not None and highway_tag.get("v") in valid_highways:
             node_elements = filter(lambda elem: elem.tag == "nd", list(way))
             nids = [node.get("ref") for node in node_elements]
@@ -753,6 +867,11 @@ def parse(filename):
                 nids = nids[::-1]
 
             street = Street(way.get("id"), nids)
+            if oneway_tag is not None:
+                street.set_oneway_tag('yes')
+            else:
+                street.set_oneway_tag('no')
+            street.set_ref_tag(ref_tag)
             street_network.add_way(street)
 
     return street_network
