@@ -106,13 +106,31 @@ class Network(object):
         :return:
         """
         way = self.ways.get(way_id)
+
         for nid in way.get_node_ids():
             node = self.nodes.get(nid)
             node.remove_way_id(way_id)
             way_ids = node.get_way_ids()
+            # Delete the node if it is no longer associated with any ways
             if len(way_ids) == 0:
                 self.nodes.remove(nid)
         self.ways.remove(way_id)
+    def join_ways(self, way_id_1, way_id_2):
+        """
+        Join two ways together to form a single way
+        """
+        # Take all nodes from way 2 and add them to way 1
+        way1 = self.ways.get(way_id_1)
+        way2 = self.ways.get(way_id_2)
+        for nid in way2.get_node_ids():
+            # This is a node we're going to add to way 1
+            node = self.nodes.get(nid)
+            # Associate the node with way 1 and disassociate it with way 2
+
+            node.append_way(way_id_1)
+            node.remove_way_id(way_id_2)
+        # Remove way 2
+        self.ways.remove(way_id_2)
 
     def swap_nodes(self, nid_from, nid_to):
         """
@@ -297,13 +315,16 @@ class OSM(Network):
         return
 
     def find_parallel_street_segments(self):
+
         """
         This method finds parallel segments and returns a list of pair of way ids
         :return: A list of pair of parallel way ids
         """
+
+        self.join_ways('6055514', '6055697')
         streets = self.ways.get_list()
         street_polygons = []
-        distance_to_sidewalk = 0.00005
+        distance_to_sidewalk = 0.00009
 
         for street in streets:
             start_node_id = street.get_node_ids()[0]
