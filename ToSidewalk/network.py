@@ -124,7 +124,7 @@ class Network(object):
         :return:
         """
         # Take all nodes from way 2 and add them to way 1
-
+        log.debug("Attempting to join ways " + way_id_1 + " and " + way_id_2 + " for merging.")
         way2 = self.ways.get(way_id_2)
         for nid in way2.get_node_ids():
             # This is a node we're going to add to way 1
@@ -181,6 +181,7 @@ class OSM(Network):
         for pair in segments_to_merge:
             ways_to_merge_1.append(int(pair[0]))
             ways_to_merge_2.append(int(pair[1]))
+            # See if ways share a node
         # Combine the two above lists
         all_ways_to_merge = ways_to_merge_1 + ways_to_merge_2
         # Using the combined list, create a set of ways that appear multiple times. These are the
@@ -426,13 +427,16 @@ class OSM(Network):
             # Get node id of street being checked
             #log.debug("currently checking: ")
             street1 = streets[street_polygons.index(pair[0])]
+
             street2 = streets[street_polygons.index(pair[1])]
             both_streets_oneway = False
             if(street1.get_oneway_tag() == 'yes' and street2.get_oneway_tag() == 'yes'):
                 both_streets_oneway = True
-
+            opposite_directions = False
+            if(street1.getdirection() == street2.getdirection()):
+                opposite_directions=True
             angle_diff = ((pair[0].angle - pair[1].angle) + 360.) % 180.
-            if pair[0].intersects(pair[1]) and (angle_diff < 10. or angle_diff>160.) and both_streets_oneway:
+            if pair[0].intersects(pair[1]) and (angle_diff < 10. or angle_diff>160.) and both_streets_oneway and opposite_directions:
                 # If the polygon intersects, and they have a kind of similar angle, and they don't share a node,
                 # then they should be merged together.
                 parallel_pairs.append((street_polygons.index(pair[0]), street_polygons.index(pair[1])))
