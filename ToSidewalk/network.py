@@ -339,6 +339,7 @@ class OSM(Network):
             #log.debug("currently checking: ")
             street1 = streets[street_polygons.index(pair[0])]
             street2 = streets[street_polygons.index(pair[1])]
+            #log.debug(street1.get_oneway_tag())
             #if (street1.nids[0]=='49788018' or street1.nids[-1] == '49788018') and (street2.nids[0]=='2428508041' or street2.nids[-1] == '2428508041'):
             if (street1.nids[0]=='49718930' or street1.nids[-1] == '49718930') and (street2.nids[0]=='49718930' or street2.nids[-1] == '49718930'):
 
@@ -445,11 +446,11 @@ class OSM(Network):
         all_nids_street_indices = [0 if nid in street_pair[0].nids else 1 for nid in all_nids]
         all_nids_street_switch = [idx_pair[0] != idx_pair[1] for idx_pair in window(all_nids_street_indices, 2)]
 
-        # Find the first occurence of an element in a list
+        # Find the first occurrence of an element in a list
         # http://stackoverflow.com/questions/9868653/find-first-list-item-that-matches-criteria
         begin_idx = all_nids_street_switch.index(next(x for x in all_nids_street_switch if x == True))
 
-        # Find the last occurence of an element in a list
+        # Find the last occurrence of an element in a list
         # http://stackoverflow.com/questions/6890170/how-to-find-the-last-occurrence-of-an-item-in-a-python-list
         end_idx = (len(all_nids_street_switch) - 1) - all_nids_street_switch[::-1].index(next(x for x in all_nids_street_switch if x == True))
 
@@ -791,6 +792,8 @@ def parse(filename):
     valid_highways = {'primary', 'secondary', 'tertiary', 'residential'}
     for way in ways_tree:
         highway_tag = way.find(".//tag[@k='highway']")
+        oneway_tag = way.find(".//tag[@k='oneway']")
+        ref_tag = way.find(".//tag[@k='ref']")
         if highway_tag is not None and highway_tag.get("v") in valid_highways:
             node_elements = filter(lambda elem: elem.tag == "nd", list(way))
             nids = [node.get("ref") for node in node_elements]
@@ -800,6 +803,11 @@ def parse(filename):
                 nids = nids[::-1]
 
             street = Street(way.get("id"), nids)
+            if oneway_tag is not None:
+                street.set_oneway_tag('yes')
+            else:
+                street.set_oneway_tag('no')
+            street.set_ref_tag(ref_tag)
             street_network.add_way(street)
 
     return street_network

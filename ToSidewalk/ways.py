@@ -103,6 +103,18 @@ class Street(Way):
         super(Street, self).__init__(wid, nids, type)
         self.sidewalk_ids = []  # Keep track of which sidewalks were generated from this way
         self.distance_to_sidewalk = 0.00004
+        self.oneway = 'undefined'
+        self.ref = 'undefined'
+
+    def set_oneway_tag(self, oneway_tag):
+        self.oneway = oneway_tag
+    def set_ref_tag(self, ref_tag):
+        self.ref = ref_tag
+
+    def get_oneway_tag(self):
+        return self.oneway
+    def get_ref_tag(self):
+        return self.ref
 
     def append_sidewalk_id(self, way_id):
         self.sidewalk_ids.append(way_id)
