@@ -304,24 +304,25 @@ if __name__ == "__main__":
     # filename = "../resources/SegmentedStreet_01.osm"
     #filename = "../resources/ParallelLanes_03.osm"
 
-    #filename = "../resources/SmallMap_04.osm"
-    filename = "../resources/newhampshire.osm"
+    filename = "../resources/SmallMap_04.osm"
+    #filename = "../resources/benning.osm"
 
-    filename = "../resources/MapPair_A_01.osm"
-    filename2 = "../resources/MapPair_B_01.osm"
+    #filename = "../resources/MapPair_A_01.osm"
+    #filename2 = "../resources/MapPair_B_01.osm"
 
     street_network1 = parse(filename)
     street_network1.preprocess()
     street_network1.parse_intersections()
 
-    street_network2 = parse(filename2)
-    street_network2.preprocess()
-    street_network2.parse_intersections()
+    #street_network2 = parse(filename2)
+    #street_network2.preprocess()
+    #street_network2.parse_intersections()
 
     sidewalk_network1 = main(street_network1)
-    sidewalk_network2 = main(street_network2)
+    geojson = sidewalk_network1.export(format="geojson")
+    #sidewalk_network2 = main(street_network2)
 
-    merged_sidewalk_network = merge_sidewalks(sidewalk_network1, sidewalk_network2)
-    geojson = merged_sidewalk_network.export(format='geojson')
+    #merged_sidewalk_network = merge_sidewalks(sidewalk_network1, sidewalk_network2)
+    #geojson = merged_sidewalk_network.export(format='geojson')
 
     print geojson
