@@ -339,6 +339,9 @@ class OSM(Network):
             #log.debug("currently checking: ")
             street1 = streets[street_polygons.index(pair[0])]
             street2 = streets[street_polygons.index(pair[1])]
+            both_streets_oneway = False
+            if(street1.get_oneway_tag() == 'yes' and street2.get_oneway_tag() == 'yes'):
+                both_streets_oneway = True
             #log.debug(street1.get_oneway_tag())
             #if (street1.nids[0]=='49788018' or street1.nids[-1] == '49788018') and (street2.nids[0]=='2428508041' or street2.nids[-1] == '2428508041'):
             if (street1.nids[0]=='49718930' or street1.nids[-1] == '49718930') and (street2.nids[0]=='49718930' or street2.nids[-1] == '49718930'):
@@ -352,9 +355,8 @@ class OSM(Network):
                 log.debug("overlap")
                 log.debug(pair[0].intersects(pair[1]))
             #log.debug("Street 1 ends at node "+str(street1.nids[-1]))
-
             angle_diff = ((pair[0].angle - pair[1].angle) + 360.) % 180.
-            if pair[0].intersects(pair[1]) and (angle_diff < 10. or angle_diff>160.):
+            if pair[0].intersects(pair[1]) and (angle_diff < 10. or angle_diff>160.) and both_streets_oneway:
                 # If the polygon intersects, and they have a kind of similar angle, and they don't share a node,
                 # then they should be merged together.
                 parallel_pairs.append((street_polygons.index(pair[0]), street_polygons.index(pair[1])))
