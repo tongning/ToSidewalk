@@ -156,13 +156,46 @@ class OSM(Network):
         if bounds:
             self.bounds = bounds
 
+    def join_connected_ways(self, segments_to_merge):
+        ways_to_merge_1 = []
+        ways_to_merge_2 = []
+        long_ways = []
+        for pair in segments_to_merge:
+            ways_to_merge_1.append(int(pair[0]))
+            ways_to_merge_2.append(int(pair[1]))
+        all_ways_to_merge = ways_to_merge_1 + ways_to_merge_2
+        ways_appearing_multiple_times = set([x for x in all_ways_to_merge if all_ways_to_merge.count(x) > 1])
+        removed_ways = []
+        for way in ways_appearing_multiple_times:
+            short_ways_to_join = []
+            for i,j in enumerate(ways_to_merge_1):
+                if j == way:
+                    short_ways_to_join.append(ways_to_merge_2[i])
+
+            for i,j in enumerate(ways_to_merge_2):
+                if j == way:
+                    short_ways_to_join.append(ways_to_merge_1[i])
+            for short_way in short_ways_to_join:
+                if short_way != short_ways_to_join[0]:
+                    self.join_ways(str(short_ways_to_join[0]),str(short_way))
+                    removed_ways.append(short_way)
+        new_segments_to_merge = []
+        for pair in segments_to_merge:
+            if int(pair[0]) in removed_ways or int(pair[1]) in removed_ways:
+                pass
+            else:
+                new_segments_to_merge.append(pair)
+        return new_segments_to_merge
     def preprocess(self):
         """
         Preprocess and clean up the data
         :return:
         """
         parallel_segments = self.find_parallel_street_segments()
-        self.merge_parallel_street_segments(parallel_segments)
+
+        parallel_segments_filtered = self.join_connected_ways(parallel_segments)
+
+        self.merge_parallel_street_segments(parallel_segments_filtered)
 
         self.split_streets()
         self.update_ways()
@@ -321,7 +354,7 @@ class OSM(Network):
         :return: A list of pair of parallel way ids
         """
 
-        self.join_ways('6055514', '6055697')
+        #self.join_ways('6055514', '6055697')
         streets = self.ways.get_list()
         street_polygons = []
         distance_to_sidewalk = 0.00009
@@ -427,6 +460,8 @@ class OSM(Network):
                     #if not ((street1.nids[0]=='49788018' or street1.nids[-1] == '49788018') and (street2.nids[0]=='2428508041' or street2.nids[-1] == '2428508041')):
                     continue
             filtered_parallel_pairs.append(pair)
+
+
 
 
         #log.debug("Debug")
