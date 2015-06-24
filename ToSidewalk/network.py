@@ -568,7 +568,7 @@ class OSM(Network):
             street1_segmentation[0].append(street1_segmentation[1][0])
         if street1_segmentation[2]:
             street1_segmentation[2].insert(0, street1_segmentation[1][-1])
-
+        # TODO: Figure out why the lines below sometimes cause a list index out of range IndexError
         if street2_segmentation[0]:
             street2_segmentation[0].append(street2_segmentation[1][0])
         if street2_segmentation[2]:
