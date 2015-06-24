@@ -710,6 +710,12 @@ class OSM(Network):
                     self.add_way(s)
 
         for street_id in set(streets_to_remove):
+            for nid in self.ways.get(street_id).nids:
+                node = self.nodes.get(nid)
+                for parent in node.parents:
+                    if not parent in streets_to_remove:
+                        # FIXME
+                        pass
             self.remove_way(street_id)
         return
 
