@@ -517,9 +517,11 @@ class OSM(Network):
                 return 1
             else:
                 return 0
-
+        # Get all the nodes in both streets and store them in a list
         all_nodes = [self.nodes.get(nid) for nid in street_pair[0].nids] + [self.nodes.get(nid) for nid in street_pair[1].nids]
+        # Sort the nodes in the list by longitude
         all_nodes = sorted(all_nodes, cmp=cmp_with_projection)
+        # Store the node IDs in another list
         all_nids = [node.id for node in all_nodes]
 
         # Condition in list comprehension
@@ -557,22 +559,33 @@ class OSM(Network):
         street1_end_idx = street_pair[0].nids.index(street1_end_nid)
         street2_end_idx = street_pair[1].nids.index(street2_end_nid)
 
+        # Street 1 is divided into three segments - beginning segment, overlapping segment, and end segment
         street1_segmentation = [street_pair[0].nids[:street1_begin_idx],
                                 street_pair[0].nids[street1_begin_idx:street1_end_idx + 1],
                                 street_pair[0].nids[street1_end_idx + 1:]]
+        # Street 2 is also divided into three segments - beginning segment, overlapping segment, and end segment
         street2_segmentation = [street_pair[1].nids[:street2_begin_idx],
                                 street_pair[1].nids[street2_begin_idx:street2_end_idx + 1],
                                 street_pair[1].nids[street2_end_idx + 1:]]
 
+        # If street 1 has a beginning segment...
         if street1_segmentation[0]:
             street1_segmentation[0].append(street1_segmentation[1][0])
+        # If street 1 has an ending segment...
         if street1_segmentation[2]:
             street1_segmentation[2].insert(0, street1_segmentation[1][-1])
-        # TODO: Figure out why the lines below sometimes cause a list index out of range IndexError
+        # If street 2 has a beginning segment...
         if street2_segmentation[0]:
-            street2_segmentation[0].append(street2_segmentation[1][0])
+            if street2_segmentation[1]:
+                street2_segmentation[0].append(street2_segmentation[1][0])
+            elif street2_segmentation[2]:
+                street2_segmentation[0].append(street2_segmentation[2][0])
+        # If street 2 has an ending segment...
         if street2_segmentation[2]:
-            street2_segmentation[2].insert(0, street2_segmentation[1][-1])
+            if street2_segmentation[1]:
+                street2_segmentation[2].insert(0, street2_segmentation[1][-1])
+            elif street2_segmentation[0]:
+                street2_segmentation[2].insert(0, street2_segmentation[0][-1])
 
         return overlapping_segment, street1_segmentation, street2_segmentation
 
@@ -599,8 +612,11 @@ class OSM(Network):
                 continue
 
             # Get two parallel segments and the distance between them
-            street1_node = self.nodes.get(street1_segment[1][0])
-            street2_node = self.nodes.get(street2_segment[1][0])
+            try:
+                street1_node = self.nodes.get(street1_segment[1][0])
+                street2_node = self.nodes.get(street2_segment[1][0])
+            except IndexError:
+                continue
             street1_end_node = self.nodes.get(street1_segment[1][-1])
             street2_end_node = self.nodes.get(street2_segment[1][-1])
 
