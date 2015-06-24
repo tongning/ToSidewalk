@@ -446,19 +446,14 @@ class OSM(Network):
             both_streets_oneway = False
             if(street1.get_oneway_tag() == 'yes' and street2.get_oneway_tag() == 'yes'):
                 both_streets_oneway = True
-            opposite_directions = False
-
             angle_diff = ((pair[0].angle - pair[1].angle) + 360.) % 180.
-            if (street1.id == '234706403' and street2.id == '234706405') or (street1.id == '234706405' and street2.id == '234706403'):
-                log.debug(street1.getdirection())
-                log.debug(street2.getdirection())
             if pair[0].intersects(pair[1]) and (angle_diff < 10. or angle_diff>170.) and both_streets_oneway:
                 # If the polygon intersects, and they have a kind of similar angle, and they don't share a node,
                 # then they should be merged together.
                 parallel_pairs.append((street_polygons.index(pair[0]), street_polygons.index(pair[1])))
         filtered_parallel_pairs = []
 
-        #Filter parallel_pairs and store in filtered_parallel_pairs
+        # Filter parallel_pairs and store in filtered_parallel_pairs
         for pair in parallel_pairs:
             street_pair = (streets[pair[0]], streets[pair[1]])
             street1 = streets[pair[0]]
