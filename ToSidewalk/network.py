@@ -241,9 +241,7 @@ class OSM(Network):
         :return:
         """
         parallel_segments = self.find_parallel_street_segments()
-        log.debug(parallel_segments)
         parallel_segments_filtered = self.join_connected_ways(parallel_segments)
-
         self.merge_parallel_street_segments(parallel_segments_filtered)
 
         self.split_streets()
