@@ -18,7 +18,6 @@ class Node(LatLng):
         self.sidewalk_nodes = {}
         self.min_intersection_cardinality = 2
         self.crosswalk_distance = 0.00006
-        self.parents = ()
         self.parent_nodes = None
         return
 
