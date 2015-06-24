@@ -12,6 +12,7 @@ from utilities import window, area
 from itertools import combinations
 from heapq import heappush, heappop, heapify
 
+
 class Network(object):
     def __init__(self, nodes, ways):
         self.nodes = nodes
@@ -115,6 +116,7 @@ class Network(object):
             if len(way_ids) == 0:
                 self.nodes.remove(nid)
         self.ways.remove(way_id)
+
     def join_ways(self, way_id_1, way_id_2):
         """
         Join two ways together to form a single way. Intended for use when a single long street is divided
@@ -153,6 +155,7 @@ class Network(object):
                 self.ways.get(way_id).swap_nodes(nid_from, nid_to)
             self.nodes.remove(nid_from)
         return
+
 
 class OSM(Network):
 
@@ -201,12 +204,12 @@ class OSM(Network):
             short_ways_to_join = []
             # Search for the ID of the long way in the two list 1, and store the associated short way (from list 2)
             # in short_ways_to_join
-            for i,j in enumerate(ways_to_merge_1):
+            for i, j in enumerate(ways_to_merge_1):
                 if j == way:
                     short_ways_to_join.append(ways_to_merge_2[i])
             # Repeat the other way around, for cases where the ID of the long way is in list 2 and the ID of the
             # short way is in list 1.
-            for i,j in enumerate(ways_to_merge_2):
+            for i, j in enumerate(ways_to_merge_2):
                 if j == way:
                     short_ways_to_join.append(ways_to_merge_1[i])
             # Go through the list of short ways that need to be joined and join them in pairs.
@@ -217,15 +220,13 @@ class OSM(Network):
                     try:
                         way1 = self.ways.get(str(short_ways_to_join[0]))
                         way2 = self.ways.get(str(short_way))
-                        if (way1.getdirection() == way2.getdirection()):
+                        if way1.getdirection() == way2.getdirection():
 
-                            self.join_ways(str(short_ways_to_join[0]),str(short_way))
+                            self.join_ways(str(short_ways_to_join[0]), str(short_way))
                             # Keep track of way IDs that are no longer valid
                             removed_ways.append(short_way)
                     except KeyError:
                         pass
-
-
         # Build new list of pairs to merge, excluding pairs with IDs that are no longer valid
         new_segments_to_merge = []
         for pair in segments_to_merge:
@@ -235,6 +236,7 @@ class OSM(Network):
             else:
                 new_segments_to_merge.append(pair)
         return new_segments_to_merge
+
     def preprocess(self):
         """
         Preprocess and clean up the data
@@ -250,9 +252,6 @@ class OSM(Network):
 
         # Clean up and so I can make a sidewalk network
         self.clean_street_segmentation()
-
-
-
         # Remove ways that have only a single node.
         for way in self.ways.get_list():
             if len(way.nids) < 2:
@@ -343,7 +342,7 @@ class OSM(Network):
                     'stroke': '#555555'
                 }
                 feature['type'] = 'Feature'
-                feature['id'] = 'way/%s' % (way.id)
+                feature['id'] = 'way/%s' % way.id
 
                 coordinates = []
                 for nid in way.nids:
@@ -400,8 +399,6 @@ class OSM(Network):
         This method finds parallel segments and returns a list of pair of way ids
         :return: A list of pair of parallel way ids
         """
-
-
         streets = self.ways.get_list()
         street_polygons = []
         distance_to_sidewalk = 0.00009
@@ -429,19 +426,13 @@ class OSM(Network):
         # Create a list for storing parallel pairs
         parallel_pairs = []
         # All possible pairs are stored for debugging purposes
+        for pair_poly in polygon_combinations:
 
-
-        # Todo: change the variable name pair to pair_poly
-        for pair_poly in polygon_combinations: # pair[0] and pair[1] are polygons
+            # pair_poly[0] and pair_poly[1] are polygons
             # Add the pair to the list of all possible pairs for debug, but limit size to 50
-
-
             # Get node id of street being checked
-            #log.debug("currently checking: ")
-            street1 = streets[street_polygons.index(pair_poly[0])]
-            street2 = streets[street_polygons.index(pair_poly[1])]
-
-
+            #street1 = streets[street_polygons.index(pair_poly[0])]
+            #street2 = streets[street_polygons.index(pair_poly[1])]
             angle_diff = ((pair_poly[0].angle - pair_poly[1].angle) + 360.) % 180.
             if pair_poly[0].intersects(pair_poly[1]) and (angle_diff < 10. or angle_diff>170.):
                 # If the polygon intersects, and they have a kind of similar angle, and they don't share a node,
@@ -529,7 +520,7 @@ class OSM(Network):
 
         # Find the first occurrence of an element in a list
         # http://stackoverflow.com/questions/9868653/find-first-list-item-that-matches-criteria
-        begin_idx = all_nids_street_switch.index(next(x for x in all_nids_street_switch if x == True))
+        begin_idx = all_nids_street_switch.index(next(x for x in all_nids_street_switch if x is True))
 
         # Find the last occurrence of an element in a list
         # http://stackoverflow.com/questions/6890170/how-to-find-the-last-occurrence-of-an-item-in-a-python-list
@@ -765,7 +756,7 @@ class OSM(Network):
         # Python heap
         # http://stackoverflow.com/questions/12749622/creating-a-heap-in-python
         # http://stackoverflow.com/questions/3954530/how-to-make-heapq-evaluate-the-heap-off-of-a-specific-attribute
-        class triangle(object):
+        class Triangle(object):
             def __init__(self, prev_idx, idx, next_idx):
                 self.idx = idx
                 self.prev_idx = idx - 1
@@ -789,7 +780,7 @@ class OSM(Network):
         dict = {}
         heap = []
         for i, group in enumerate(groups):
-            t = triangle(group[0], group[1], group[2])
+            t = Triangle(group[0], group[1], group[2])
             dict[group[1]] = t
             heappush(heap, t)
 
