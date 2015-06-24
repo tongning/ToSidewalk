@@ -401,6 +401,7 @@ class OSM(Network):
         """
         streets = self.ways.get_list()
         street_polygons = []
+        # Threshold for merging - increasing this will merge parallel ways that are further apart.
         distance_to_sidewalk = 0.00009
 
         for street in streets:
