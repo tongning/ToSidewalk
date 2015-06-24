@@ -469,13 +469,11 @@ class OSM(Network):
         all_nids_street_indices = [0 if nid in street_pair[0].nids else 1 for nid in all_nids]
         all_nids_street_switch = [idx_pair[0] != idx_pair[1] for idx_pair in window(all_nids_street_indices, 2)]
 
-        # Find the first occurrence of an element in a list
-        # http://stackoverflow.com/questions/9868653/find-first-list-item-that-matches-criteria
-        begin_idx = all_nids_street_switch.index(next(x for x in all_nids_street_switch if x == True))
+        # Find the first occurrence of True in the list
+        begin_idx = all_nids_street_switch.index(True)
 
-        # Find the last occurrence of an element in a list
-        # http://stackoverflow.com/questions/6890170/how-to-find-the-last-occurrence-of-an-item-in-a-python-list
-        end_idx = (len(all_nids_street_switch) - 1) - all_nids_street_switch[::-1].index(next(x for x in all_nids_street_switch if x == True))
+        # Find the last occurrence of True in the list
+        end_idx = len(all_nids_street_switch) - 1 - all_nids_street_switch[::-1].index(True)
 
         overlapping_segment = all_nids[begin_idx:end_idx]
 
