@@ -1,5 +1,7 @@
 from itertools import islice
+import math
 import numpy as np
+
 
 def area(p1, p2, p3):
     """
@@ -13,6 +15,20 @@ def area(p1, p2, p3):
     v2 = np.array(p3) - np.array(p2)
     area = np.cross(v1, v2) / 2
     return abs(area)
+
+def latlng_offset(lat_origin, lng_origin, dx, dy):
+    """
+    Given an original coordinate (lat, lng) and displacement (dx, dy) in meters,
+    return a new latlng coordinate.
+    http://gis.stackexchange.com/questions/2951/algorithm-for-offsetting-a-latitude-longitude-by-some-amount-of-meters
+    :param lat_origin: Original latitude
+    :param lng_origin: Original longitude
+    :param dx: Displacement along the x-axis in Cartesian coordinate
+    :param dy: Displacement along the y-axis in Cartesian coordinate
+    """
+    dlat = float(dy) / 111111
+    dlng = float(dx) / (111111 * cos(math.radians(lat_origin))
+    return (lat_origin + dlat, lng_origin + dlng)
 
 def window(seq, n=2, padding=None):
     """
