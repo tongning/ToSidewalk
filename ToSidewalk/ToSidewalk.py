@@ -268,7 +268,7 @@ if __name__ == "__main__":
     #filename = "../resources/ParallelLanes_03.osm"
 
     filename = "../resources/SmallMap_04.osm"
-    #filename = "../resources/newyork3.osm"
+    #filename = "../resources/capitol.osm"
 
     street_network = parse(filename)
     street_network.preprocess()
