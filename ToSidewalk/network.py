@@ -431,10 +431,10 @@ class OSM(Network):
             # pair_poly[0] and pair_poly[1] are polygons
             # Add the pair to the list of all possible pairs for debug, but limit size to 50
             # Get node id of street being checked
-            #street1 = streets[street_polygons.index(pair_poly[0])]
-            #street2 = streets[street_polygons.index(pair_poly[1])]
+            # street1 = streets[street_polygons.index(pair_poly[0])]
+            # street2 = streets[street_polygons.index(pair_poly[1])]
             angle_diff = ((pair_poly[0].angle - pair_poly[1].angle) + 360.) % 180.
-            if pair_poly[0].intersects(pair_poly[1]) and (angle_diff < 10. or angle_diff>170.):
+            if pair_poly[0].intersects(pair_poly[1]) and (angle_diff < 10. or angle_diff > 170.):
                 # If the polygon intersects, and they have a kind of similar angle, and they don't share a node,
                 # then they should be merged together.
                 parallel_pairs.append((street_polygons.index(pair_poly[0]), street_polygons.index(pair_poly[1])))
@@ -443,8 +443,8 @@ class OSM(Network):
         # Filter parallel_pairs and store in filtered_parallel_pairs
         for pair in parallel_pairs:
             street_pair = (streets[pair[0]], streets[pair[1]])
-            street1 = streets[pair[0]]
-            street2 = streets[pair[1]]
+            # street1 = streets[pair[0]]
+            # street2 = streets[pair[1]]
 
             shared_nids = set(street_pair[0].nids) & set(street_pair[1].nids)
 
