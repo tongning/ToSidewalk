@@ -517,6 +517,13 @@ class OSM(Network):
                 return 1
             else:
                 return 0
+
+        # check if the nodes in the second street is in the right order
+        street_2_nodes = [self.nodes.get(nid) for nid in street_pair[1].nids]
+        sorted_street2_nodes = sorted(street_2_nodes, cmp=cmp_with_projection)
+        if street_2_nodes[0].id != sorted_street2_nodes[0].id:
+            street_pair[1].nids = list(reversed(street_pair[1].nids))
+
         # Get all the nodes in both streets and store them in a list
         all_nodes = [self.nodes.get(nid) for nid in street_pair[0].nids] + [self.nodes.get(nid) for nid in street_pair[1].nids]
         # Sort the nodes in the list by longitude
@@ -567,7 +574,10 @@ class OSM(Network):
         street2_segmentation = [street_pair[1].nids[:street2_begin_idx],
                                 street_pair[1].nids[street2_begin_idx:street2_end_idx + 1],
                                 street_pair[1].nids[street2_end_idx + 1:]]
-
+        log.debug("Working with ways " + str(street_pair[0].id) + " and " + str(street_pair[1].id))
+        log.debug(street1_segmentation)
+        log.debug(street2_segmentation)
+        log.debug("\n\n\n\n")
         # If street 1 has a beginning segment...
         if street1_segmentation[0]:
             street1_segmentation[0].append(street1_segmentation[1][0])
