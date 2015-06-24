@@ -574,10 +574,7 @@ class OSM(Network):
         street2_segmentation = [street_pair[1].nids[:street2_begin_idx],
                                 street_pair[1].nids[street2_begin_idx:street2_end_idx + 1],
                                 street_pair[1].nids[street2_end_idx + 1:]]
-        log.debug("Working with ways " + str(street_pair[0].id) + " and " + str(street_pair[1].id))
-        log.debug(street1_segmentation)
-        log.debug(street2_segmentation)
-        log.debug("\n\n\n\n")
+
         # If street 1 has a beginning segment...
         if street1_segmentation[0]:
             street1_segmentation[0].append(street1_segmentation[1][0])
@@ -626,6 +623,7 @@ class OSM(Network):
                 street1_node = self.nodes.get(street1_segment[1][0])
                 street2_node = self.nodes.get(street2_segment[1][0])
             except IndexError:
+                log.debug("Warning! Segment to merge was empty for one or both streets, so skipping this merge...")
                 continue
             street1_end_node = self.nodes.get(street1_segment[1][-1])
             street2_end_node = self.nodes.get(street2_segment[1][-1])
