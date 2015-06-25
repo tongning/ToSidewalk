@@ -159,16 +159,16 @@ def make_crosswalk_nodes(intersection_node, adj_street_nodes):
     return crosswalk_nodes
 
 
-def connect_crosswalk_nodes(sidewalk_network, crosswalk):
+def connect_crosswalk_nodes(sidewalk_network, crosswalk_node_ids):
     """
     Connect crosswalk nodes to sidewalk nodes. Then remove redundant sidewalk nodes around the intersection.
     :param sidewalk_network:
     :param crosswalk:
     :return:
     """
-    crosswalk_node_ids = crosswalk.get_node_ids()[:-1]  # Crosswalk has a redundant node at the end.
+    # crosswalk_node_ids = crosswalk.get_node_ids()[:-1]  # Crosswalk has a redundant node at the end.
 
-    for crosswalk_node_id in crosswalk_node_ids:
+    for crosswalk_node_id in crosswalk_node_ids[:-1]:
         # Get the intersection node and two nodes that created the intersection sidewalk node
         crosswalk_node = sidewalk_network.nodes.get(crosswalk_node_id)
         intersection_node, adjacent_street_node1, adjacent_street_node2 = crosswalk_node.parents
@@ -238,30 +238,78 @@ def make_crosswalks(street_network, sidewalk_network):
         crosswalk_nodes = make_crosswalk_nodes(intersection_node, adj_street_nodes)
         crosswalk_node_ids = [node.id for node in crosswalk_nodes]
         crosswalk_node_ids.append(crosswalk_node_ids[0])
-        crosswalk = Sidewalk(None, crosswalk_node_ids, "crosswalk")
+        # crosswalk = Sidewalk(None, crosswalk_node_ids, "crosswalk")
+
+        # Add nodes to the network
         for crosswalk_node in crosswalk_nodes:
             sidewalk_network.add_node(crosswalk_node)
             sidewalk_network.nodes.crosswalk_node_ids.append(crosswalk_node.id)
 
-        sidewalk_network.add_way(crosswalk)
+        # Add crosswalks to the network
+        crosswalk_node_id_pairs = window(crosswalk_node_ids, 2)
+        for node_id_pair in crosswalk_node_id_pairs:
+            n1 = sidewalk_network.nodes.get(node_id_pair[0])
+            n2 = sidewalk_network.nodes.get(node_id_pair[1])
+            if len(n1.get_way_ids()) == 1 and len(n2.get_way_ids()) == 1:
+                crosswalk = Sidewalk(None, node_id_pair, "footway")
+            else:
+                crosswalk = Sidewalk(None, node_id_pair, "crosswalk")
+            sidewalk_network.add_way(crosswalk)
 
         # Connect the crosswalk nodes with correct sidewalk nodes
-        connect_crosswalk_nodes(sidewalk_network, crosswalk)
+        connect_crosswalk_nodes(sidewalk_network, crosswalk_node_ids)
     return
 
+
+def merge_sidewalks(sidewalk_network1, sidewalk_network2):
+    """Returns a merged sidewalk network
+
+    Takes two sidewalk networks and merges them without duplicating sidewalk data"""
+    for node in sidewalk_network1.nodes.get_list():
+        node.confirmed = True
+
+    # add new nodes from sidewalk_network2 to sidewalk_network1
+    for sidewalk_node in sidewalk_network2.nodes.get_list():
+        in_other = False
+        same_node = None
+        for other_sidewalk_node in sidewalk_network1.nodes.get_list():
+            if sidewalk_node.location() == other_sidewalk_node.location():
+                in_other = True
+                same_node = other_sidewalk_node
+        if not in_other:
+            sidewalk_network1.add_node(sidewalk_node)
+        else:
+            sidewalk_network2.nodes.update(sidewalk_node.id, same_node)
+
+    # add new ways from sidewalk_network2 to sidewalk_network1
+    for way in sidewalk_network2.ways.get_list():
+        # ensure all ways have correct nids, if incorrect update to correct nid from network1
+        for nid in way.get_node_ids():
+            if sidewalk_network1.nodes.get(nid) is None:
+                 way.swap_nodes(nid, sidewalk_network2.nodes.get(nid).id)
+
+        has_confirmed_parents = False
+        for nid in way.get_node_ids():
+            if sidewalk_network1.nodes.get(nid).confirmed:
+                has_confirmed_parents = True
+        if not has_confirmed_parents:
+            sidewalk_network1.add_way(way)
+    return sidewalk_network1
 
 def main(street_network):
     sidewalk_network = make_sidewalks(street_network)
     make_crosswalks(street_network, sidewalk_network)
 
-    output = sidewalk_network.export(format='geojson')
-    return output
-
+    return sidewalk_network
 
 if __name__ == "__main__":
     # filename = "../resources/SimpleWay_01.osm"
     # filename = "../resources/Simple4WayIntersection_01.osm"
-    # filename = "../resources/SmallMap_01.osm"
+    filename = "../resources/SmallMap_01.osm"
+    # filename = "../resources/ParallelLanes_03.osm"
+    # filename = "../resources/MapPair_B_01.osm"
+    # filename = "../resources/SegmentedStreet_01.osm"
+    # filename = "../resources/ParallelLanes_03.osm"
     #filename = "../resources/ParallelLanes_03.osm"
     #filename = "../resources/MapPair_B_01.osm"
     # filename = "../resources/SegmentedStreet_01.osm"
@@ -269,11 +317,24 @@ if __name__ == "__main__":
 
     filename = "../resources/SmallMap_04.osm"
     #filename = "../resources/capitol.osm"
+    #filename = "../resources/benning.osm"
+    # filename = "../resources/SmallMap_04.osm"
+    #filename = "../resources/MapPair_A_01.osm"
+    #filename2 = "../resources/MapPair_B_01.osm"
 
-    street_network = parse(filename)
-    street_network.preprocess()
-    street_network.parse_intersections()
+    street_network1 = parse(filename)
+    street_network1.preprocess()
+    street_network1.parse_intersections()
 
-    geojson = main(street_network)
+    #street_network2 = parse(filename2)
+    #street_network2.preprocess()
+    #street_network2.parse_intersections()
+
+    sidewalk_network1 = main(street_network1)
+    geojson = sidewalk_network1.export(format="geojson")
+    #sidewalk_network2 = main(street_network2)
+
+    #merged_sidewalk_network = merge_sidewalks(sidewalk_network1, sidewalk_network2)
+    #geojson = merged_sidewalk_network.export(format='geojson')
+
     print geojson
-

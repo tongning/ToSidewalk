@@ -19,6 +19,7 @@ class Node(LatLng):
         self.min_intersection_cardinality = 2
         self.crosswalk_distance = 0.00010
         self.parent_nodes = None
+        self.confirmed = False
         return
 
     def __str__(self):
