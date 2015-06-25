@@ -125,16 +125,20 @@ class Network(object):
         """
         # Take all nodes from way 2 and add them to way 1
         log.debug("Attempting to join ways " + way_id_1 + " and " + way_id_2 + " for merging.")
-        way2 = self.ways.get(way_id_2)
-        for nid in way2.get_node_ids():
-            # This is a node we're going to add to way 1
-            node = self.nodes.get(nid)
-            # Associate the node with way 1 and disassociate it with way 2
+        try:
+            way2 = self.ways.get(way_id_2)
+            for nid in way2.get_node_ids():
+                # This is a node we're going to add to way 1
+                node = self.nodes.get(nid)
+                # Associate the node with way 1 and disassociate it with way 2
 
-            node.append_way(way_id_1)
-            node.remove_way_id(way_id_2)
-        # Remove way 2
-        self.ways.remove(way_id_2)
+                node.append_way(way_id_1)
+                node.remove_way_id(way_id_2)
+            # Remove way 2
+            self.ways.remove(way_id_2)
+        except KeyError:
+            log.debug("Join failed, skipping...")
+            pass
 
     def swap_nodes(self, nid_from, nid_to):
         """
@@ -209,9 +213,19 @@ class OSM(Network):
             for short_way in short_ways_to_join:
                 # Don't join the first way with the first way
                 if short_way != short_ways_to_join[0]:
-                    self.join_ways(str(short_ways_to_join[0]),str(short_way))
-                    # Keep track of way IDs that are no longer valid
-                    removed_ways.append(short_way)
+                    # Make sure we only join ways that are going in the same direction
+                    try:
+                        way1 = self.ways.get(str(short_ways_to_join[0]))
+                        way2 = self.ways.get(str(short_way))
+                        if (way1.getdirection() == way2.getdirection()):
+
+                            self.join_ways(str(short_ways_to_join[0]),str(short_way))
+                            # Keep track of way IDs that are no longer valid
+                            removed_ways.append(short_way)
+                    except KeyError:
+                        pass
+
+
         # Build new list of pairs to merge, excluding pairs with IDs that are no longer valid
         new_segments_to_merge = []
         for pair in segments_to_merge:
@@ -227,9 +241,7 @@ class OSM(Network):
         :return:
         """
         parallel_segments = self.find_parallel_street_segments()
-
         parallel_segments_filtered = self.join_connected_ways(parallel_segments)
-
         self.merge_parallel_street_segments(parallel_segments_filtered)
 
         self.split_streets()
@@ -420,33 +432,29 @@ class OSM(Network):
 
 
         # Todo: change the variable name pair to pair_poly
-        for pair in polygon_combinations: # pair[0] and pair[1] are polygons
+        for pair_poly in polygon_combinations: # pair[0] and pair[1] are polygons
             # Add the pair to the list of all possible pairs for debug, but limit size to 50
 
 
             # Get node id of street being checked
             #log.debug("currently checking: ")
-            street1 = streets[street_polygons.index(pair[0])]
+            street1 = streets[street_polygons.index(pair_poly[0])]
+            street2 = streets[street_polygons.index(pair_poly[1])]
 
-            street2 = streets[street_polygons.index(pair[1])]
-            both_streets_oneway = False
-            if(street1.get_oneway_tag() == 'yes' and street2.get_oneway_tag() == 'yes'):
-                both_streets_oneway = True
-            opposite_directions = False
-            if(street1.getdirection() == street2.getdirection()):
-                opposite_directions=True
-            angle_diff = ((pair[0].angle - pair[1].angle) + 360.) % 180.
-            if pair[0].intersects(pair[1]) and (angle_diff < 10. or angle_diff>160.) and both_streets_oneway and opposite_directions:
+
+            angle_diff = ((pair_poly[0].angle - pair_poly[1].angle) + 360.) % 180.
+            if pair_poly[0].intersects(pair_poly[1]) and (angle_diff < 10. or angle_diff>170.):
                 # If the polygon intersects, and they have a kind of similar angle, and they don't share a node,
                 # then they should be merged together.
-                parallel_pairs.append((street_polygons.index(pair[0]), street_polygons.index(pair[1])))
+                parallel_pairs.append((street_polygons.index(pair_poly[0]), street_polygons.index(pair_poly[1])))
         filtered_parallel_pairs = []
 
-        #Filter parallel_pairs and store in filtered_parallel_pairs
+        # Filter parallel_pairs and store in filtered_parallel_pairs
         for pair in parallel_pairs:
             street_pair = (streets[pair[0]], streets[pair[1]])
             street1 = streets[pair[0]]
             street2 = streets[pair[1]]
+
             shared_nids = set(street_pair[0].nids) & set(street_pair[1].nids)
 
             # Find the adjacent nodes for the shared node
@@ -501,8 +509,17 @@ class OSM(Network):
             else:
                 return 0
 
+        # check if the nodes in the second street is in the right order
+        street_2_nodes = [self.nodes.get(nid) for nid in street_pair[1].nids]
+        sorted_street2_nodes = sorted(street_2_nodes, cmp=cmp_with_projection)
+        if street_2_nodes[0].id != sorted_street2_nodes[0].id:
+            street_pair[1].nids = list(reversed(street_pair[1].nids))
+
+        # Get all the nodes in both streets and store them in a list
         all_nodes = [self.nodes.get(nid) for nid in street_pair[0].nids] + [self.nodes.get(nid) for nid in street_pair[1].nids]
+        # Sort the nodes in the list by longitude
         all_nodes = sorted(all_nodes, cmp=cmp_with_projection)
+        # Store the node IDs in another list
         all_nids = [node.id for node in all_nodes]
 
         # Condition in list comprehension
@@ -540,22 +557,33 @@ class OSM(Network):
         street1_end_idx = street_pair[0].nids.index(street1_end_nid)
         street2_end_idx = street_pair[1].nids.index(street2_end_nid)
 
+        # Street 1 is divided into three segments - beginning segment, overlapping segment, and end segment
         street1_segmentation = [street_pair[0].nids[:street1_begin_idx],
                                 street_pair[0].nids[street1_begin_idx:street1_end_idx + 1],
                                 street_pair[0].nids[street1_end_idx + 1:]]
+        # Street 2 is also divided into three segments - beginning segment, overlapping segment, and end segment
         street2_segmentation = [street_pair[1].nids[:street2_begin_idx],
                                 street_pair[1].nids[street2_begin_idx:street2_end_idx + 1],
                                 street_pair[1].nids[street2_end_idx + 1:]]
 
+        # If street 1 has a beginning segment...
         if street1_segmentation[0]:
             street1_segmentation[0].append(street1_segmentation[1][0])
+        # If street 1 has an ending segment...
         if street1_segmentation[2]:
             street1_segmentation[2].insert(0, street1_segmentation[1][-1])
-
+        # If street 2 has a beginning segment...
         if street2_segmentation[0]:
-            street2_segmentation[0].append(street2_segmentation[1][0])
+            if street2_segmentation[1]:
+                street2_segmentation[0].append(street2_segmentation[1][0])
+            elif street2_segmentation[2]:
+                street2_segmentation[0].append(street2_segmentation[2][0])
+        # If street 2 has an ending segment...
         if street2_segmentation[2]:
-            street2_segmentation[2].insert(0, street2_segmentation[1][-1])
+            if street2_segmentation[1]:
+                street2_segmentation[2].insert(0, street2_segmentation[1][-1])
+            elif street2_segmentation[0]:
+                street2_segmentation[2].insert(0, street2_segmentation[0][-1])
 
         return overlapping_segment, street1_segmentation, street2_segmentation
 
@@ -582,8 +610,12 @@ class OSM(Network):
                 continue
 
             # Get two parallel segments and the distance between them
-            street1_node = self.nodes.get(street1_segment[1][0])
-            street2_node = self.nodes.get(street2_segment[1][0])
+            try:
+                street1_node = self.nodes.get(street1_segment[1][0])
+                street2_node = self.nodes.get(street2_segment[1][0])
+            except IndexError:
+                log.debug("Warning! Segment to merge was empty for one or both streets, so skipping this merge...")
+                continue
             street1_end_node = self.nodes.get(street1_segment[1][-1])
             street2_end_node = self.nodes.get(street2_segment[1][-1])
 

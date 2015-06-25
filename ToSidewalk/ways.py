@@ -111,6 +111,7 @@ class Street(Way):
         endnode=self.parent_ways.parent_network.nodes.get(self.get_node_ids()[-1])
         startlat=startnode.lat
         endlat = endnode.lat
+
         if startlat>endlat:
             return 1
         else:

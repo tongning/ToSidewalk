@@ -305,7 +305,11 @@ if __name__ == "__main__":
     #filename = "../resources/ParallelLanes_03.osm"
 
     filename = "../resources/SmallMap_04.osm"
+<<<<<<< HEAD
     #filename = "../resources/benning.osm"
+=======
+    #filename = "../resources/capitol.osm"
+>>>>>>> 1e089d70af8bc21bc586f13d4bbae158c374dae7
 
     #filename = "../resources/MapPair_A_01.osm"
     #filename2 = "../resources/MapPair_B_01.osm"
