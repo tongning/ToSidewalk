@@ -328,11 +328,11 @@ if __name__ == "__main__":
     print(" --- End parse_intersections " + str(datetime.now()))
 
     print(" --- Begin create geojson " + str(datetime.now()))
-    geojson = main(street_network)
-    print(" --- End create geojson " + str(datetime.now()))
-    print geojson
 
-    sidewalk_network1 = main(street_network1)
+    print(" --- End create geojson " + str(datetime.now()))
+
+
+    sidewalk_network1 = main(street_network)
     geojson = sidewalk_network1.export(format="geojson")
     #sidewalk_network2 = main(street_network2)
 
