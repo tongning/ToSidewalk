@@ -221,7 +221,6 @@ class OSM(Network):
                         way1 = self.ways.get(str(short_ways_to_join[0]))
                         way2 = self.ways.get(str(short_way))
                         if way1.getdirection() == way2.getdirection():
-
                             self.join_ways(str(short_ways_to_join[0]), str(short_way))
                             # Keep track of way IDs that are no longer valid
                             removed_ways.append(short_way)
@@ -428,7 +427,6 @@ class OSM(Network):
         parallel_pairs = []
         # All possible pairs are stored for debugging purposes
         for pair_poly in polygon_combinations:
-
             # pair_poly[0] and pair_poly[1] are polygons
             # Add the pair to the list of all possible pairs for debug, but limit size to 50
             # Get node id of street being checked
@@ -446,7 +444,6 @@ class OSM(Network):
             street_pair = (streets[pair[0]], streets[pair[1]])
             # street1 = streets[pair[0]]
             # street2 = streets[pair[1]]
-
             shared_nids = set(street_pair[0].nids) & set(street_pair[1].nids)
 
             # Find the adjacent nodes for the shared node
