@@ -7,7 +7,7 @@ from nodes import Node, Nodes
 from ways import Sidewalk, Sidewalks, Street
 from utilities import window
 from network import OSM, parse
-
+from datetime import datetime
 log.basicConfig(format="", level=log.DEBUG)
 
 dummy_street = Street()
@@ -305,7 +305,7 @@ def main(street_network):
 if __name__ == "__main__":
     # filename = "../resources/SimpleWay_01.osm"
     # filename = "../resources/Simple4WayIntersection_01.osm"
-    filename = "../resources/SmallMap_01.osm"
+    # filename = "../resources/SmallMap_01.osm"
     # filename = "../resources/ParallelLanes_03.osm"
     # filename = "../resources/MapPair_B_01.osm"
     # filename = "../resources/SegmentedStreet_01.osm"
@@ -314,21 +314,23 @@ if __name__ == "__main__":
     #filename = "../resources/MapPair_B_01.osm"
     # filename = "../resources/SegmentedStreet_01.osm"
     #filename = "../resources/ParallelLanes_03.osm"
+    #filename = "../resources/SmallMap_04.osm"
+    filename = "../resources/dc-quarter.osm"
 
-    filename = "../resources/SmallMap_04.osm"
-    #filename = "../resources/capitol.osm"
-    #filename = "../resources/benning.osm"
-    # filename = "../resources/SmallMap_04.osm"
-    #filename = "../resources/MapPair_A_01.osm"
-    #filename2 = "../resources/MapPair_B_01.osm"
+    print(" --- Begin Parse --- " + str(datetime.now()))
+    street_network = parse(filename)
+    print(" --- End Parse   --- " + str(datetime.now()))
+    print(" --- Begin preprocess --- " + str(datetime.now()))
+    street_network.preprocess()
+    print(" --- End preprocess --- " + str(datetime.now()))
+    print(" --- Begin parse_intersections " + str(datetime.now()))
+    street_network.parse_intersections()
+    print(" --- End parse_intersections " + str(datetime.now()))
 
-    street_network1 = parse(filename)
-    street_network1.preprocess()
-    street_network1.parse_intersections()
-
-    #street_network2 = parse(filename2)
-    #street_network2.preprocess()
-    #street_network2.parse_intersections()
+    print(" --- Begin create geojson " + str(datetime.now()))
+    geojson = main(street_network)
+    print(" --- End create geojson " + str(datetime.now()))
+    print geojson
 
     sidewalk_network1 = main(street_network1)
     geojson = sidewalk_network1.export(format="geojson")
