@@ -1,0 +1,122 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<osm version='0.6' upload='true' generator='JOSM'>
+  <bounds minlat='39.0814233' minlon='-76.9684553' maxlat='39.0823894' maxlon='-76.9631982' origin='CGImap 0.4.0 (26960 thorn-03.openstreetmap.org)' />
+  <node id='-18' action='modify' visible='true' lat='39.08177828387' lon='-76.96447332638' />
+  <node id='-16' action='modify' visible='true' lat='39.08157424318' lon='-76.96450688234' />
+  <node id='-14' action='modify' visible='true' lat='39.08148307588' lon='-76.964512475' />
+  <node id='-12' action='modify' visible='true' lat='39.0821645436' lon='-76.96529055191' />
+  <node id='-10' action='modify' visible='true' lat='39.08193022867' lon='-76.96529003431' />
+  <node id='-8' action='modify' visible='true' lat='39.08166106908' lon='-76.96527884899' />
+  <node id='49177958' timestamp='2009-11-30T14:00:02Z' uid='147510' user='woodpeck_fixbot' visible='true' version='2' changeset='3255924' lat='39.078628' lon='-76.965324' />
+  <node id='49190532' timestamp='2011-07-03T03:10:33Z' uid='12055' user='aude' visible='true' version='3' changeset='8614190' lat='39.081983' lon='-76.9682768'>
+    <tag k='highway' v='turning_circle' />
+  </node>
+  <node id='49190534' timestamp='2009-11-30T14:03:43Z' uid='147510' user='woodpeck_fixbot' visible='true' version='2' changeset='3255924' lat='39.081916' lon='-76.968078' />
+  <node id='49190536' timestamp='2009-11-30T14:03:43Z' uid='147510' user='woodpeck_fixbot' visible='true' version='2' changeset='3255924' lat='39.081924' lon='-76.967895' />
+  <node id='49190538' timestamp='2009-11-30T14:03:43Z' uid='147510' user='woodpeck_fixbot' visible='true' version='2' changeset='3255924' lat='39.082004' lon='-76.967063' />
+  <node id='49190539' timestamp='2009-11-30T14:03:43Z' uid='147510' user='woodpeck_fixbot' visible='true' version='2' changeset='3255924' lat='39.082141' lon='-76.96566' />
+  <node id='49190542' timestamp='2009-11-30T14:03:43Z' uid='147510' user='woodpeck_fixbot' visible='true' version='2' changeset='3255924' lat='39.08216' lon='-76.965324' />
+  <node id='49190543' timestamp='2009-11-30T14:03:43Z' uid='147510' user='woodpeck_fixbot' visible='true' version='2' changeset='3255924' lat='39.082187' lon='-76.964958' />
+  <node id='49190545' timestamp='2009-11-30T14:03:43Z' uid='147510' user='woodpeck_fixbot' visible='true' version='2' changeset='3255924' lat='39.082187' lon='-76.964324' />
+  <node id='49190547' timestamp='2009-11-30T14:03:43Z' uid='147510' user='woodpeck_fixbot' visible='true' version='2' changeset='3255924' lat='39.082141' lon='-76.964111' />
+  <node id='49190549' timestamp='2009-11-30T14:03:43Z' uid='147510' user='woodpeck_fixbot' visible='true' version='2' changeset='3255924' lat='39.082054' lon='-76.963973' />
+  <node id='49190551' timestamp='2009-11-30T14:03:43Z' uid='147510' user='woodpeck_fixbot' visible='true' version='2' changeset='3255924' lat='39.081989' lon='-76.963912' />
+  <node id='49190553' timestamp='2009-11-30T14:03:43Z' uid='147510' user='woodpeck_fixbot' visible='true' version='2' changeset='3255924' lat='39.081878' lon='-76.963859' />
+  <node id='49190555' timestamp='2009-11-30T14:03:43Z' uid='147510' user='woodpeck_fixbot' visible='true' version='2' changeset='3255924' lat='39.081771' lon='-76.963844' />
+  <node id='49190557' timestamp='2009-11-30T14:03:43Z' uid='147510' user='woodpeck_fixbot' visible='true' version='2' changeset='3255924' lat='39.080101' lon='-76.963821' />
+  <node id='49190559' timestamp='2011-07-03T03:10:30Z' uid='12055' user='aude' visible='true' version='3' changeset='8614190' lat='39.079215' lon='-76.9638416'>
+    <tag k='highway' v='turning_circle' />
+  </node>
+  <node id='49232549' timestamp='2009-11-30T14:20:09Z' uid='147510' user='woodpeck_fixbot' visible='true' version='2' changeset='3255924' lat='39.079475' lon='-76.96743' />
+  <node id='49289504' timestamp='2009-11-30T14:33:20Z' uid='147510' user='woodpeck_fixbot' visible='true' version='2' changeset='3256171' lat='39.077907' lon='-76.965156' />
+  <node id='49289505' timestamp='2009-11-06T17:04:59Z' uid='147510' user='woodpeck_fixbot' visible='true' version='2' changeset='3049896' lat='39.07809' lon='-76.965263' />
+  <node id='49289509' timestamp='2009-11-30T14:33:20Z' uid='147510' user='woodpeck_fixbot' visible='true' version='2' changeset='3256171' lat='39.078201' lon='-76.965301' />
+  <node id='49289512' timestamp='2009-11-06T17:04:59Z' uid='147510' user='woodpeck_fixbot' visible='true' version='2' changeset='3049896' lat='39.078365' lon='-76.965324' />
+  <node id='49289517' timestamp='2009-11-30T14:33:20Z' uid='147510' user='woodpeck_fixbot' visible='true' version='2' changeset='3256171' lat='39.080391' lon='-76.965324' />
+  <node id='49358608' timestamp='2009-11-30T14:54:36Z' uid='147510' user='woodpeck_fixbot' visible='true' version='2' changeset='3256171' lat='39.079608' lon='-76.967285' />
+  <node id='49358611' timestamp='2009-11-30T14:54:36Z' uid='147510' user='woodpeck_fixbot' visible='true' version='2' changeset='3256171' lat='39.079742' lon='-76.967193' />
+  <node id='49358613' timestamp='2009-11-30T14:54:36Z' uid='147510' user='woodpeck_fixbot' visible='true' version='2' changeset='3256171' lat='39.079864' lon='-76.967124' />
+  <node id='49358615' timestamp='2009-11-30T14:54:36Z' uid='147510' user='woodpeck_fixbot' visible='true' version='2' changeset='3256171' lat='39.080154' lon='-76.967025' />
+  <node id='49358617' timestamp='2009-11-30T14:54:36Z' uid='147510' user='woodpeck_fixbot' visible='true' version='2' changeset='3256171' lat='39.081653' lon='-76.967002' />
+  <way id='-49' action='modify' visible='true'>
+    <nd ref='49190545' />
+    <nd ref='-18' />
+    <nd ref='-16' />
+    <nd ref='-14' />
+    <tag k='highway' v='primary' />
+    <tag k='name' v='Far Street' />
+    <tag k='oneway' v='yes' />
+  </way>
+  <way id='-47' action='modify' visible='true'>
+    <nd ref='-12' />
+    <nd ref='-10' />
+    <nd ref='-8' />
+    <tag k='highway' v='primary' />
+    <tag k='name' v='Short Close Street' />
+    <tag k='oneway' v='yes' />
+  </way>
+  <way id='5970348' action='modify' timestamp='2013-01-29T02:01:56Z' uid='451693' user='bot-mode' visible='true' version='2' changeset='14830029'>
+    <nd ref='49190532' />
+    <nd ref='49190534' />
+    <nd ref='49190536' />
+    <nd ref='49190538' />
+    <nd ref='49190539' />
+    <nd ref='49190542' />
+    <nd ref='-12' />
+    <nd ref='49190543' />
+    <nd ref='49190545' />
+    <nd ref='49190547' />
+    <nd ref='49190549' />
+    <nd ref='49190551' />
+    <nd ref='49190553' />
+    <nd ref='49190555' />
+    <nd ref='49190557' />
+    <nd ref='49190559' />
+    <tag k='highway' v='residential' />
+    <tag k='name' v='Parallel Lane' />
+    <tag k='tiger:cfcc' v='A41' />
+    <tag k='tiger:county' v='Montgomery, MD' />
+    <tag k='tiger:name_base' v='Parallel' />
+    <tag k='tiger:name_type' v='Ln' />
+    <tag k='tiger:reviewed' v='no' />
+    <tag k='tiger:zip_left' v='20904' />
+    <tag k='tiger:zip_right' v='20904' />
+  </way>
+  <way id='5981424' action='modify' timestamp='2013-01-29T02:38:19Z' uid='451693' user='bot-mode' visible='true' version='2' changeset='14830131'>
+    <nd ref='49289504' />
+    <nd ref='49289505' />
+    <nd ref='49289509' />
+    <nd ref='49289512' />
+    <nd ref='49177958' />
+    <nd ref='49289517' />
+    <nd ref='49190542' />
+    <tag k='highway' v='residential' />
+    <tag k='name' v='Fairridge Drive' />
+    <tag k='oneway' v='yes' />
+    <tag k='tiger:cfcc' v='A41' />
+    <tag k='tiger:county' v='Montgomery, MD' />
+    <tag k='tiger:name_base' v='Fairridge' />
+    <tag k='tiger:name_type' v='Dr' />
+    <tag k='tiger:reviewed' v='no' />
+    <tag k='tiger:zip_left' v='20904' />
+    <tag k='tiger:zip_right' v='20904' />
+  </way>
+  <way id='5989612' timestamp='2013-01-29T02:47:23Z' uid='451693' user='bot-mode' visible='true' version='2' changeset='14830131'>
+    <nd ref='49232549' />
+    <nd ref='49358608' />
+    <nd ref='49358611' />
+    <nd ref='49358613' />
+    <nd ref='49358615' />
+    <nd ref='49358617' />
+    <nd ref='49190538' />
+    <tag k='highway' v='residential' />
+    <tag k='name' v='Bridgewater Drive' />
+    <tag k='tiger:cfcc' v='A41' />
+    <tag k='tiger:county' v='Montgomery, MD' />
+    <tag k='tiger:name_base' v='Bridgewater' />
+    <tag k='tiger:name_type' v='Dr' />
+    <tag k='tiger:reviewed' v='no' />
+    <tag k='tiger:zip_left' v='20904' />
+    <tag k='tiger:zip_right' v='20904' />
+  </way>
+</osm>
