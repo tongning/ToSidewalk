@@ -745,7 +745,8 @@ class OSM(Network):
                         street2_segment[2][0] = node_to[subset_nids[-1]]
                         s = Street(None, street2_segment[2])
                         self.add_way(s)
-            except KeyError:
+            except:
+                print("Something went wrong while merging street segment, so skipping...")
                 continue
             ######
         for street_id in set(streets_to_remove):
