@@ -270,28 +270,31 @@ class OSM(Network):
         Go through nodes and find ones that have two connected ways (nodes should have either one or more than two ways)
         """
         for node in self.nodes.get_list():
-            if len(node.get_way_ids()) == 2:
-                way_id_1, way_id_2 = node.get_way_ids()
-                way_1 = self.ways.get(way_id_1)
-                way_2 = self.ways.get(way_id_2)
+            try:
+                if len(node.get_way_ids()) == 2:
+                    way_id_1, way_id_2 = node.get_way_ids()
+                    way_1 = self.ways.get(way_id_1)
+                    way_2 = self.ways.get(way_id_2)
 
-                # Given that the streets are split, node's index in each way's nids (a list of node ids) should
-                # either be 0 or else.
-                if way_1.nids.index(node.id) == 0 and way_2.nids.index(node.id) == 0:
-                    combined_nids = way_1.nids[:0:-1] + way_2.nids
-                elif way_1.nids.index(node.id) != 0 and way_2.nids.index(node.id) == 0:
-                    combined_nids = way_1.nids[:-1] + way_2.nids
-                elif way_1.nids.index(node.id) == 0 and way_2.nids.index(node.id) != 0:
-                    combined_nids = way_2.nids[:-1] + way_1.nids
-                else:
-                    combined_nids = way_1.nids + way_2.nids[1::-1]
+                    # Given that the streets are split, node's index in each way's nids (a list of node ids) should
+                    # either be 0 or else.
+                    if way_1.nids.index(node.id) == 0 and way_2.nids.index(node.id) == 0:
+                        combined_nids = way_1.nids[:0:-1] + way_2.nids
+                    elif way_1.nids.index(node.id) != 0 and way_2.nids.index(node.id) == 0:
+                        combined_nids = way_1.nids[:-1] + way_2.nids
+                    elif way_1.nids.index(node.id) == 0 and way_2.nids.index(node.id) != 0:
+                        combined_nids = way_2.nids[:-1] + way_1.nids
+                    else:
+                        combined_nids = way_1.nids + way_2.nids[1::-1]
 
-                # Create a new way from way_1 and way_2. Then remove the two ways from self.way
-                new_street = Street(None, combined_nids, "footway")
-                self.add_way(new_street)
-                self.remove_way(way_id_1)
-                self.remove_way(way_id_2)
-
+                    # Create a new way from way_1 and way_2. Then remove the two ways from self.way
+                    new_street = Street(None, combined_nids, "footway")
+                    self.add_way(new_street)
+                    self.remove_way(way_id_1)
+                    self.remove_way(way_id_2)
+            except:
+                print("Something went wrong while cleaning street segmentation, so skipping...")
+                continue
         return
 
     def export(self, format="geojson"):
