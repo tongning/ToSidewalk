@@ -1,5 +1,6 @@
 from xml.etree import cElementTree as ET
 from shapely.geometry import Polygon, Point, LineString
+from datetime import datetime
 import json
 import logging as log
 import math
@@ -242,16 +243,22 @@ class OSM(Network):
         Preprocess and clean up the data
         :return:
         """
+        print("Finding parallel street segments" + str(datetime.now()))
         parallel_segments = self.find_parallel_street_segments()
+        print("Finished finding parallel street segments" + str(datetime.now()))
         parallel_segments_filtered = self.join_connected_ways(parallel_segments)
+        print("Begin merging parallel street segments" + str(datetime.now()))
         self.merge_parallel_street_segments(parallel_segments_filtered)
-
+        print("Finished merging parallel street segments, beginning split streets" + str(datetime.now()))
         self.split_streets()
+        print("Finished split streets, beginning update_ways" + str(datetime.now()))
         self.update_ways()
+        print("Finished update_ways, beginning merge_nodes" + str(datetime.now()))
         self.merge_nodes()
-
+        print("Finished merge_nodes, beginning clean_street_segmentation" + str(datetime.now()))
         # Clean up and so I can make a sidewalk network
         self.clean_street_segmentation()
+        print("Finished clean_street_segmentation" + str(datetime.now()))
         # Remove ways that have only a single node.
         for way in self.ways.get_list():
             if len(way.nids) < 2:
@@ -915,10 +922,16 @@ def parse_intersections(nodes, ways):
 if __name__ == "__main__":
     # filename = "../resources/SegmentedStreet_01.osm"
     filename = "../resources/ParallelLanes_01.osm"
+    print("Beginning parse..." + str(datetime.now()))
+    
     street_network = parse(filename)
+    print("Parse finished, beginning preprocess..." + str(datetime.now()))
     street_network.preprocess()
+    print("Preprocess finished, beginning parse_intersections" + str(datetime.now()))
     street_network.parse_intersections()
+    print("parse_intersections finished, beginning export" + str(datetime.now()))
 
     geojson = street_network.export(format='geojson')
+    print("Export finished" + str(datetime.now()))
     print geojson
 

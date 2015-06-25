@@ -7,7 +7,7 @@ from nodes import Node, Nodes
 from ways import Sidewalk, Sidewalks, Street
 from utilities import window
 from network import OSM, parse
-
+from datetime import datetime
 log.basicConfig(format="", level=log.DEBUG)
 
 dummy_street = Street()
@@ -267,13 +267,20 @@ if __name__ == "__main__":
     # filename = "../resources/SegmentedStreet_01.osm"
     #filename = "../resources/ParallelLanes_03.osm"
 
-    filename = "../resources/SmallMap_04.osm"
-    #filename = "../resources/capitol.osm"
-
+    #filename = "../resources/SmallMap_04.osm"
+    filename = "../resources/dc-quarter.osm"
+    print(" --- Begin Parse --- " + str(datetime.now()))
     street_network = parse(filename)
+    print(" --- End Parse   --- " + str(datetime.now()))
+    print(" --- Begin preprocess --- " + str(datetime.now()))
     street_network.preprocess()
+    print(" --- End preprocess --- " + str(datetime.now()))
+    print(" --- Begin parse_intersections " + str(datetime.now()))
     street_network.parse_intersections()
+    print(" --- End parse_intersections " + str(datetime.now()))
 
+    print(" --- Begin create geojson " + str(datetime.now()))
     geojson = main(street_network)
+    print(" --- End create geojson " + str(datetime.now()))
     print geojson
 
