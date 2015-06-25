@@ -27,7 +27,7 @@ def latlng_offset(lat_origin, lng_origin, dx, dy):
     :param dy: Displacement along the y-axis in Cartesian coordinate
     """
     dlat = float(dy) / 111111
-    dlng = float(dx) / (111111 * cos(math.radians(lat_origin))
+    dlng = float(dx) / (111111 * math.cos(math.radians(lat_origin)))
     return (lat_origin + dlat, lng_origin + dlng)
 
 def window(seq, n=2, padding=None):
