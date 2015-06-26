@@ -324,25 +324,25 @@ if __name__ == "__main__":
     #filename = "../resources/ParallelLanes_03.osm"
     #filename = "../resources/SmallMap_04.osm"
     files = []
-    files.append("../tests/resources/out2339_3133.pbfr")
-    files.append("../tests/resources/out2339_3134.pbfr")
-    files.append("../tests/resources/out2339_3135.pbfr")
-    files.append("../tests/resources/out2340_3133.pbfr")
-    #files.append("../tests/resources/out2340_3134.pbfr")
-    files.append("../tests/resources/out2340_3135.pbfr")
-    files.append("../tests/resources/out2341_3132.pbfr")
-    #files.append("../tests/resources/out2341_3133.pbfr")
-    #files.append("../tests/resources/out2341_3134.pbfr")
-    files.append("../tests/resources/out2341_3135.pbfr")
-    #files.append("../tests/resources/out2342_3133.pbfr")
-    #files.append("../tests/resources/out2342_3134.pbfr")
-    files.append("../tests/resources/out2342_3135.pbfr")
-    files.append("../tests/resources/out2343_3133.pbfr")
-    files.append("../tests/resources/out2343_3134.pbfr")
-    files.append("../tests/resources/out2343_3135.pbfr")
-    files.append("../tests/resources/out2343_3136.pbfr")
-    files.append("../tests/resources/out2344_3133.pbfr")
-    files.append("../tests/resources/out2344_3134.pbfr")
+    #files.append("../resources/tests/out2339_3133.pbfr")
+    #files.append("../resources/tests/out2339_3134.pbfr")
+    #files.append("../resources/tests/out2339_3135.pbfr")
+    #files.append("../resources/tests/out2340_3133.pbfr")
+    files.append("../resources/tests/out2340_3134.pbfr")  # Causes error
+    #files.append("../resources/tests/out2340_3135.pbfr")
+    #files.append("../resources/tests/out2341_3132.pbfr")
+    files.append("../resources/tests/out2341_3133.pbfr")  # Causes error
+    files.append("../resources/tests/out2341_3134.pbfr")  # Causes error
+    #files.append("../resources/tests/out2341_3135.pbfr")
+    files.append("../resources/tests/out2342_3133.pbfr")  # Causes error
+    files.append("../resources/tests/out2342_3134.pbfr")  # Causes error
+    #files.append("../resources/tests/out2342_3135.pbfr")
+    #files.append("../resources/tests/out2343_3133.pbfr")
+    #files.append("../resources/tests/out2343_3134.pbfr")
+    #files.append("../resources/tests/out2343_3135.pbfr")
+    #files.append("../resources/tests/out2343_3136.pbfr")
+    #files.append("../resources/tests/out2344_3133.pbfr")
+    #files.append("../resources/tests/out2344_3134.pbfr")
     street_networks = []
     for filename in files:
         street_networks.append(parse(filename))
