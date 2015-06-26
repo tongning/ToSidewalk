@@ -291,8 +291,10 @@ class OSM(Network):
                     self.add_way(new_street)
                     self.remove_way(way_id_1)
                     self.remove_way(way_id_2)
-            except:
+            except Exception as e:
                 print("Something went wrong while cleaning street segmentation, so skipping...")
+                print("This was the error:")
+                print(e)
                 continue
         return
 
@@ -745,8 +747,10 @@ class OSM(Network):
                         street2_segment[2][0] = node_to[subset_nids[-1]]
                         s = Street(None, street2_segment[2])
                         self.add_way(s)
-            except:
+            except Exception as e:
                 print("Something went wrong while merging street segment, so skipping...")
+                print("This was the error:")
+                print(e)
                 continue
             ######
         for street_id in set(streets_to_remove):
