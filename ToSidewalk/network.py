@@ -140,7 +140,7 @@ class Network(object):
             # Remove way 2
             self.ways.remove(way_id_2)
         except KeyError:
-            log.debug("Join failed, skipping...")
+            log.exception("Join failed, skipping...")
             pass
 
     def swap_nodes(self, nid_from, nid_to):
@@ -228,6 +228,7 @@ class OSM(Network):
                     except KeyError:
                         pass
         # Build new list of pairs to merge, excluding pairs with IDs that are no longer valid
+
         new_segments_to_merge = []
         for pair in segments_to_merge:
             # If the pair contains an ID that is no longer valid, don't add it to the new list of pairs.
@@ -236,6 +237,8 @@ class OSM(Network):
             else:
                 new_segments_to_merge.append(pair)
         return new_segments_to_merge
+
+
 
     def preprocess(self):
         """
@@ -292,9 +295,7 @@ class OSM(Network):
                     self.remove_way(way_id_1)
                     self.remove_way(way_id_2)
             except Exception as e:
-                print("Something went wrong while cleaning street segmentation, so skipping...")
-                print("This was the error:")
-                print(e)
+                log.exception("Something went wrong while cleaning street segmentation, so skipping...")
                 continue
         return
 
@@ -413,7 +414,7 @@ class OSM(Network):
         streets = self.ways.get_list()
         street_polygons = []
         # Threshold for merging - increasing this will merge parallel ways that are further apart.
-        distance_to_sidewalk = 0.00009
+        distance_to_sidewalk = 0.00005
 
         for street in streets:
             start_node_id = street.get_node_ids()[0]
@@ -615,7 +616,7 @@ class OSM(Network):
                     street1_node = self.nodes.get(street1_segment[1][0])
                     street2_node = self.nodes.get(street2_segment[1][0])
                 except IndexError:
-                    log.debug("Warning! Segment to merge was empty for one or both streets, so skipping this merge...")
+                    log.exception("Warning! Segment to merge was empty for one or both streets, so skipping this merge...")
                     continue
                 street1_end_node = self.nodes.get(street1_segment[1][-1])
                 street2_end_node = self.nodes.get(street2_segment[1][-1])
@@ -748,9 +749,7 @@ class OSM(Network):
                         s = Street(None, street2_segment[2])
                         self.add_way(s)
             except Exception as e:
-                print("Something went wrong while merging street segment, so skipping...")
-                print("This was the error:")
-                print(e)
+                log.exception("Something went wrong while merging street segment, so skipping...")
                 continue
             ######
         for street_id in set(streets_to_remove):
@@ -942,5 +941,5 @@ if __name__ == "__main__":
 
     geojson = street_network.export(format='geojson')
     print("Export finished" + str(datetime.now()))
-    print geojson
+    #print geojson
 

@@ -203,7 +203,7 @@ def connect_crosswalk_nodes(sidewalk_network, crosswalk_node_ids):
 
                 sidewalk_network.swap_nodes(node_to_swap.id, crosswalk_node.id)
         except ValueError:
-            print("Error while connecting crosswalk nodes, so skipping...")
+            log.exception("Error while connecting crosswalk nodes, so skipping...")
             continue
     return
 
@@ -264,7 +264,7 @@ def make_crosswalks(street_network, sidewalk_network):
             # Connect the crosswalk nodes with correct sidewalk nodes
             connect_crosswalk_nodes(sidewalk_network, crosswalk_node_ids)
         except ValueError:
-            print("ValueError in make_sidewalks, so skipping...")
+            log.exception("ValueError in make_sidewalks, so skipping...")
             continue
     return
 
@@ -323,25 +323,40 @@ if __name__ == "__main__":
     # filename = "../resources/SegmentedStreet_01.osm"
     #filename = "../resources/ParallelLanes_03.osm"
     #filename = "../resources/SmallMap_04.osm"
-    filename = "../resources/dc-quarter-2.osm"
+    files = []
+    files.append("../tests/resources/out2339_3133.pbfr")
+    files.append("../tests/resources/out2339_3134.pbfr")
+    files.append("../tests/resources/out2339_3135.pbfr")
+    files.append("../tests/resources/out2340_3133.pbfr")
+    #files.append("../tests/resources/out2340_3134.pbfr")
+    files.append("../tests/resources/out2340_3135.pbfr")
+    files.append("../tests/resources/out2341_3132.pbfr")
+    #files.append("../tests/resources/out2341_3133.pbfr")
+    #files.append("../tests/resources/out2341_3134.pbfr")
+    files.append("../tests/resources/out2341_3135.pbfr")
+    #files.append("../tests/resources/out2342_3133.pbfr")
+    #files.append("../tests/resources/out2342_3134.pbfr")
+    files.append("../tests/resources/out2342_3135.pbfr")
+    files.append("../tests/resources/out2343_3133.pbfr")
+    files.append("../tests/resources/out2343_3134.pbfr")
+    files.append("../tests/resources/out2343_3135.pbfr")
+    files.append("../tests/resources/out2343_3136.pbfr")
+    files.append("../tests/resources/out2344_3133.pbfr")
+    files.append("../tests/resources/out2344_3134.pbfr")
+    street_networks = []
+    for filename in files:
+        street_networks.append(parse(filename))
+    for street_network in street_networks:
+        street_network.preprocess()
+        street_network.parse_intersections()
+    sidewalk_networks = []
+    for street_network in street_networks:
+        sidewalk_networks.append(main(street_network))
+    sidewalk_network_main = sidewalk_networks[0]
 
-    print(" --- Begin Parse --- " + str(datetime.now()))
-    street_network = parse(filename)
-    print(" --- End Parse   --- " + str(datetime.now()))
-    print(" --- Begin preprocess --- " + str(datetime.now()))
-    street_network.preprocess()
-    print(" --- End preprocess --- " + str(datetime.now()))
-    print(" --- Begin parse_intersections " + str(datetime.now()))
-    street_network.parse_intersections()
-    print(" --- End parse_intersections " + str(datetime.now()))
-
-    print(" --- Begin create geojson " + str(datetime.now()))
-
-    print(" --- End create geojson " + str(datetime.now()))
-
-
-    sidewalk_network1 = main(street_network)
-    geojson = sidewalk_network1.export(format="geojson")
+    for sidewalk_network in sidewalk_networks[1:]:
+        sidewalk_network_main = merge_sidewalks(sidewalk_network_main,sidewalk_network)
+    geojson = sidewalk_network_main.export(format="geojson")
     #sidewalk_network2 = main(street_network2)
 
     #merged_sidewalk_network = merge_sidewalks(sidewalk_network1, sidewalk_network2)
