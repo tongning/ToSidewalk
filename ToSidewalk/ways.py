@@ -64,13 +64,10 @@ class Way(object):
         self.nids = [nid for nid in self.nids if nid != nid_to_remove]
 
     def swap_nodes(self, nid_from, nid_to):
-        try:
-            index_from = self.nids.index(nid_from)
-            self.nids[index_from] = nid_to
-        except:
-            error = 1
-            log.debug(error)
-            pass
+
+        index_from = self.nids.index(nid_from)
+        self.nids[index_from] = nid_to
+
 
 class Ways(object):
     def __init__(self):
@@ -105,7 +102,7 @@ class Ways(object):
 # Notes on inheritance
 # http://stackoverflow.com/questions/576169/understanding-python-super-with-init-methods
 class Street(Way):
-    def __init__(self, wid=None, nids=(), type=None):
+    def __init__(self, wid=None, nids=[], type=None):
         super(Street, self).__init__(wid, nids, type)
         self.sidewalk_ids = []  # Keep track of which sidewalks were generated from this way
         self.distance_to_sidewalk = 0.00008

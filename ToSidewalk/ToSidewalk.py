@@ -257,9 +257,9 @@ def make_crosswalks(street_network, sidewalk_network):
                 n1 = sidewalk_network.nodes.get(node_id_pair[0])
                 n2 = sidewalk_network.nodes.get(node_id_pair[1])
                 if len(n1.get_way_ids()) == 1 and len(n2.get_way_ids()) == 1:
-                    crosswalk = Sidewalk(None, node_id_pair, "footway")
+                    crosswalk = Sidewalk(None, list(node_id_pair), "footway")
                 else:
-                    crosswalk = Sidewalk(None, node_id_pair, "crosswalk")
+                    crosswalk = Sidewalk(None, list(node_id_pair), "crosswalk")
                 sidewalk_network.add_way(crosswalk)
 
             # Connect the crosswalk nodes with correct sidewalk nodes
@@ -329,14 +329,14 @@ if __name__ == "__main__":
     #files.append("../resources/tests/out2339_3134.pbfr")
     #files.append("../resources/tests/out2339_3135.pbfr")
     #files.append("../resources/tests/out2340_3133.pbfr")
-    #files.append("../resources/tests/out2340_3134.pbfr")  # Causes error
+    #files.append("../resources/tests/out2340_3134.pbfr")  # Causes sidewalk network join error
     #files.append("../resources/tests/out2340_3135.pbfr")
     #files.append("../resources/tests/out2341_3132.pbfr")
-    #files.append("../resources/tests/out2341_3133.pbfr")  # Causes error
-    #files.append("../resources/tests/out2341_3134.pbfr")  # Causes error
+    files.append("../resources/tests/out2341_3133.pbfr")  # Causes error
+    files.append("../resources/tests/out2341_3134.pbfr")  # Causes error
     #files.append("../resources/tests/out2341_3135.pbfr")
     #files.append("../resources/tests/out2342_3133.pbfr")  # Causes error
-    files.append("../resources/tests/out2342_3134.pbfr")  # Causes math domain error
+    #files.append("../resources/tests/out2342_3134.pbfr")  # Causes math domain error
     #files.append("../resources/tests/out2342_3135.pbfr")
     #files.append("../resources/tests/out2343_3133.pbfr")
     #files.append("../resources/tests/out2343_3134.pbfr")
@@ -351,14 +351,19 @@ if __name__ == "__main__":
         street_networks.append(parse(filename))
     for street_network in street_networks:
         street_network.preprocess()
+        print("Beginning to parse intersections")
         street_network.parse_intersections()
+        print("Finished parsing intersections")
+    print("Beginning to merge sidewalk networks")
     sidewalk_networks = []
+    print("1")
     for street_network in street_networks:
         sidewalk_networks.append(main(street_network))
     sidewalk_network_main = sidewalk_networks[0]
-
+    print("2")
     for sidewalk_network in sidewalk_networks[1:]:
         sidewalk_network_main = merge_sidewalks(sidewalk_network_main,sidewalk_network)
+    print("3")
     geojson = sidewalk_network_main.export(format="geojson")
     #sidewalk_network2 = main(street_network2)
 
