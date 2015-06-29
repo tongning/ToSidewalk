@@ -186,6 +186,7 @@ def connect_crosswalk_nodes(sidewalk_network, crosswalk_node_ids):
                 # Then also create a vector from the intersection node to the sidewalk node
                 v_adjacent_street_node = intersection_node.vector_to(adjacent_street_node, normalize=True)
                 shared_street_id = intersection_node.get_shared_way_ids(adjacent_street_node)[0]
+                # TODO: Bug: sometimes both sidewalk nodes are empty causing error.
                 sidewalk_node_1_from_intersection, sidewalk_node_2_from_intersection = intersection_node.get_sidewalk_nodes(shared_street_id)
                 v_sidewalk_node_1_from_intersection = intersection_node.vector_to(sidewalk_node_1_from_intersection, normalize=True)
 
@@ -330,6 +331,7 @@ if __name__ == "__main__":
     #files.append("../resources/tests/out2340_3133.pbfr")
     #files.append("../resources/tests/out2340_3134.pbfr")  # Causes error
     files.append("../resources/tests/wilson.osm")  # Causes error
+    #files.append("../resources/tests/jefferson.osm")  # Causes error
     #files.append("../resources/tests/out2340_3135.pbfr")
     #files.append("../resources/tests/out2341_3132.pbfr")
     #files.append("../resources/tests/out2341_3133.pbfr")  # Causes error

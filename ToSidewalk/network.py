@@ -57,7 +57,9 @@ class Network(object):
         """
         self.ways.add(way)
         for nid in way.nids:
-            self.nodes.get(nid).way_ids.append(way.id)
+            # self.nodes.get(nid).way_ids.append(way.id)
+            node = self.nodes.get(nid)
+            node.append_way(way.id)
 
     def add_ways(self, ways):
         """
@@ -294,8 +296,8 @@ class OSM(Network):
                     self.add_way(new_street)
                     self.remove_way(way_id_1)
                     # ToDO: Sometimes way_id_1 is the same as way_id_2, causing KeyError when removing way 2
-                    if(way_id_1 != way_id_2):
-                        self.remove_way(way_id_2)
+                    #if(way_id_1 != way_id_2):
+                    self.remove_way(way_id_2)
             except Exception as e:
                 log.exception("Something went wrong while cleaning street segmentation, so skipping...")
                 continue
@@ -614,7 +616,10 @@ class OSM(Network):
 
                 # First find parts of the street pairs that you want to merge (you don't want to merge entire streets
                 # because, for example, one could be much longer than the other and it doesn't make sense to merge
+                # subset_nids is the overlapping segment
                 subset_nids, street1_segment, street2_segment = self.segment_parallel_streets((street_pair[0], street_pair[1]))
+
+                # If there is no overlapping segment, skip this merge
                 if not subset_nids:
                     continue
 
@@ -637,6 +642,7 @@ class OSM(Network):
                 new_street_nids = []
                 street1_idx = 0
                 street2_idx = 0
+                # First node of middle segment
                 street1_nid = street1_segment[1][0]
                 street2_nid = street2_segment[1][0]
                 for nid in subset_nids:
@@ -691,7 +697,7 @@ class OSM(Network):
                 streets_to_remove.append(street_pair[1].id)
 
                 # Create streets from the unmerged nodes.
-                # Todo: I think this part of the code can be prettier
+                # Todo for KH: I think this part of the code can be prettier
                 if street1_segment[0] or street2_segment[0]:
                     if street1_segment[0] and street2_segment[0]:
                         if street1_segment[0][0] == street2_segment[0][0]:
@@ -721,7 +727,7 @@ class OSM(Network):
                     else:
                         # Only street2_segment exists
                         street2_segment[0][-1] = node_to[street2_segment[0][-1]]
-                        # Todo: Bug: Sometimes the node_to dictionary does not contain street2_segment[0][-1] causing error
+                        # Todo: Bug: Sometimes the node_to dictionary does not contain street2_segment[0][-1] causing error. Use the wilson.osm
                         s = Street(None, street2_segment[0])
                         self.add_way(s)
 

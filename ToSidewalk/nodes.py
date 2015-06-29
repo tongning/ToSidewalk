@@ -34,7 +34,8 @@ class Node(LatLng):
         self.sidewalk_nodes.setdefault(way_id, []).append(node)
 
     def append_way(self, wid):
-        self.way_ids.append(wid)
+        if wid not in self.way_ids:
+            self.way_ids.append(wid)
 
     def belongs_to(self):
         return self.parent_nodes
