@@ -64,8 +64,13 @@ class Way(object):
         self.nids = [nid for nid in self.nids if nid != nid_to_remove]
 
     def swap_nodes(self, nid_from, nid_to):
-        index_from = self.nids.index(nid_from)
-        self.nids[index_from] = nid_to
+        try:
+            index_from = self.nids.index(nid_from)
+            self.nids[index_from] = nid_to
+        except:
+            error = 1
+            log.debug(error)
+            pass
 
 class Ways(object):
     def __init__(self):

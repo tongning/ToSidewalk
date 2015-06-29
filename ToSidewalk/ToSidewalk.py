@@ -231,7 +231,7 @@ def make_crosswalks(street_network, sidewalk_network):
                 # Make a dummy node between two vectors that form the largest angle
                 # Using the four nodes (3 original nodes and a dummy node), create crosswalk nodes
                 vectors = [intersection_node.vector_to(adj_street_node, normalize=True) for adj_street_node in adj_street_nodes]
-                angles = [math.acos(np.dot(vectors[i - 1], vectors[i])) for i in range(3)]
+                angles = [math.acos(np.dot(vectors[i - 1], vectors[i])) for i in range(3)]  # Todo. Math domain errors #9
 
                 idx = np.argmax(angles)
                 vec_idx = (idx + 1) % 3
@@ -330,15 +330,13 @@ if __name__ == "__main__":
     #files.append("../resources/tests/out2339_3135.pbfr")
     #files.append("../resources/tests/out2340_3133.pbfr")
     #files.append("../resources/tests/out2340_3134.pbfr")  # Causes error
-    files.append("../resources/tests/wilson.osm")  # Causes error
-    #files.append("../resources/tests/jefferson.osm")  # Causes error
     #files.append("../resources/tests/out2340_3135.pbfr")
     #files.append("../resources/tests/out2341_3132.pbfr")
     #files.append("../resources/tests/out2341_3133.pbfr")  # Causes error
     #files.append("../resources/tests/out2341_3134.pbfr")  # Causes error
     #files.append("../resources/tests/out2341_3135.pbfr")
     #files.append("../resources/tests/out2342_3133.pbfr")  # Causes error
-    #files.append("../resources/tests/out2342_3134.pbfr")  # Causes error
+    files.append("../resources/tests/out2342_3134.pbfr")  # Causes math domain error
     #files.append("../resources/tests/out2342_3135.pbfr")
     #files.append("../resources/tests/out2343_3133.pbfr")
     #files.append("../resources/tests/out2343_3134.pbfr")
@@ -346,6 +344,8 @@ if __name__ == "__main__":
     #files.append("../resources/tests/out2343_3136.pbfr")
     #files.append("../resources/tests/out2344_3133.pbfr")
     #files.append("../resources/tests/out2344_3134.pbfr")
+    #files.append("../resources/tests/wilson.osm")  # Causes error
+    #files.append("../resources/tests/jefferson.osm")  # Causes error
     street_networks = []
     for filename in files:
         street_networks.append(parse(filename))
@@ -364,5 +364,5 @@ if __name__ == "__main__":
 
     #merged_sidewalk_network = merge_sidewalks(sidewalk_network1, sidewalk_network2)
     #geojson = merged_sidewalk_network.export(format='geojson')
-
-    #print geojson
+    f = open('output.txt','w')
+    print >>f, geojson
