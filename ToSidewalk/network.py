@@ -293,7 +293,9 @@ class OSM(Network):
                     new_street = Street(None, combined_nids, "footway")
                     self.add_way(new_street)
                     self.remove_way(way_id_1)
-                    self.remove_way(way_id_2)
+                    # ToDO: Sometimes way_id_1 is the same as way_id_2, causing KeyError when removing way 2
+                    if(way_id_1 != way_id_2):
+                        self.remove_way(way_id_2)
             except Exception as e:
                 log.exception("Something went wrong while cleaning street segmentation, so skipping...")
                 continue
@@ -414,7 +416,7 @@ class OSM(Network):
         streets = self.ways.get_list()
         street_polygons = []
         # Threshold for merging - increasing this will merge parallel ways that are further apart.
-        distance_to_sidewalk = 0.00005
+        distance_to_sidewalk = 0.00003
 
         for street in streets:
             start_node_id = street.get_node_ids()[0]
@@ -484,6 +486,9 @@ class OSM(Network):
                 angle_to_node2 = math.degrees(shared_node.angle_to(adj_node2))
                 if abs(abs(angle_to_node1)-abs(angle_to_node2)) > 90:
                     # Paths are connected but they are not parallel lines
+                    continue
+                if(pair[0] == pair[1]):
+                    # Don't merge two ways that are the same
                     continue
             filtered_parallel_pairs.append(pair)
         return [(streets[pair[0]].id, streets[pair[1]].id) for pair in filtered_parallel_pairs]
@@ -601,6 +606,8 @@ class OSM(Network):
 
         # Merge parallel pairs
         for pair in parallel_pairs:
+
+
             #####
             try:
                 street_pair = (self.ways.get(pair[0]), self.ways.get(pair[1]))
@@ -714,6 +721,7 @@ class OSM(Network):
                     else:
                         # Only street2_segment exists
                         street2_segment[0][-1] = node_to[street2_segment[0][-1]]
+                        # Todo: Bug: Sometimes the node_to dictionary does not contain street2_segment[0][-1] causing error
                         s = Street(None, street2_segment[0])
                         self.add_way(s)
 

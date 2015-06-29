@@ -328,14 +328,15 @@ if __name__ == "__main__":
     #files.append("../resources/tests/out2339_3134.pbfr")
     #files.append("../resources/tests/out2339_3135.pbfr")
     #files.append("../resources/tests/out2340_3133.pbfr")
-    files.append("../resources/tests/out2340_3134.pbfr")  # Causes error
+    #files.append("../resources/tests/out2340_3134.pbfr")  # Causes error
+    files.append("../resources/tests/wilson.osm")  # Causes error
     #files.append("../resources/tests/out2340_3135.pbfr")
     #files.append("../resources/tests/out2341_3132.pbfr")
-    files.append("../resources/tests/out2341_3133.pbfr")  # Causes error
-    files.append("../resources/tests/out2341_3134.pbfr")  # Causes error
+    #files.append("../resources/tests/out2341_3133.pbfr")  # Causes error
+    #files.append("../resources/tests/out2341_3134.pbfr")  # Causes error
     #files.append("../resources/tests/out2341_3135.pbfr")
-    files.append("../resources/tests/out2342_3133.pbfr")  # Causes error
-    files.append("../resources/tests/out2342_3134.pbfr")  # Causes error
+    #files.append("../resources/tests/out2342_3133.pbfr")  # Causes error
+    #files.append("../resources/tests/out2342_3134.pbfr")  # Causes error
     #files.append("../resources/tests/out2342_3135.pbfr")
     #files.append("../resources/tests/out2343_3133.pbfr")
     #files.append("../resources/tests/out2343_3134.pbfr")
@@ -362,4 +363,4 @@ if __name__ == "__main__":
     #merged_sidewalk_network = merge_sidewalks(sidewalk_network1, sidewalk_network2)
     #geojson = merged_sidewalk_network.export(format='geojson')
 
-    print geojson
+    #print geojson
