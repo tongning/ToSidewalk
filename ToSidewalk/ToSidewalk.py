@@ -1,7 +1,9 @@
 import logging as log
 import math
 import numpy as np
-
+import os
+import gzip
+import glob
 from latlng import LatLng
 from nodes import Node, Nodes
 from ways import Sidewalk, Sidewalks, Street
@@ -269,7 +271,9 @@ def make_crosswalks(street_network, sidewalk_network):
             continue
     return
 
-
+def split_large_osm_file(filename):
+    command = "java -Xmx4000M -jar splitter.jar --output=xml --output-dir=data --max-nodes=15000 " + filename + " > splitter.log"
+    os.system(command)
 def merge_sidewalks(sidewalk_network1, sidewalk_network2):
     """Returns a merged sidewalk network
 
@@ -324,33 +328,38 @@ if __name__ == "__main__":
     # filename = "../resources/SegmentedStreet_01.osm"
     #filename = "../resources/ParallelLanes_03.osm"
     #filename = "../resources/SmallMap_04.osm"
-    files = []
-    #files.append("../resources/tests/out2339_3133.pbfr")
-    #files.append("../resources/tests/out2339_3134.pbfr")
-    #files.append("../resources/tests/out2339_3135.pbfr")
-    #files.append("../resources/tests/out2340_3133.pbfr")
-    #files.append("../resources/tests/out2340_3134.pbfr")  # Causes sidewalk network join error
-    #files.append("../resources/tests/out2340_3135.pbfr")
-    #files.append("../resources/tests/out2341_3132.pbfr")
-    files.append("../resources/tests/out2341_3133.pbfr")  # Causes error
-    files.append("../resources/tests/out2341_3134.pbfr")  # Causes error
-    #files.append("../resources/tests/out2341_3135.pbfr")
-    #files.append("../resources/tests/out2342_3133.pbfr")  # Causes error
-    #files.append("../resources/tests/out2342_3134.pbfr")  # Causes math domain error
-    #files.append("../resources/tests/out2342_3135.pbfr")
-    #files.append("../resources/tests/out2343_3133.pbfr")
-    #files.append("../resources/tests/out2343_3134.pbfr")
-    #files.append("../resources/tests/out2343_3135.pbfr")
-    #files.append("../resources/tests/out2343_3136.pbfr")
-    #files.append("../resources/tests/out2344_3133.pbfr")
-    #files.append("../resources/tests/out2344_3134.pbfr")
-    #files.append("../resources/tests/wilson.osm")  # Causes error
-    #files.append("../resources/tests/jefferson.osm")  # Causes error
+    filename = "../resources/dc-baltimore.osm"
+
+    split_large_osm_file(filename)
+
+    files = glob.glob("data/*.gz")
+    log.debug("Working with " + str(files))
+    # Decompress each GZ file
+    for filename in files:
+        f = gzip.open(filename, 'rb')
+        file_content = f.read()
+        log.debug("writing to "+filename+".osm")
+        outfile = open(filename+".osm", "w")
+        outfile.write(file_content)
+        outfile.close()
+    files = glob.glob("data/*.osm")
+
+    #files=[]
+    #files.append(filename)
     street_networks = []
     for filename in files:
-        street_networks.append(parse(filename))
+        log.debug("Parsing " + filename)
+        try:
+            street_networks.append(parse(filename))
+        except:
+            log.debug("Failed, skipping")
+            continue
     for street_network in street_networks:
-        street_network.preprocess()
+        try:
+            street_network.preprocess()
+        except:
+            log.debug("Error preprocessing this street network. Skipping.")
+            continue
         print("Beginning to parse intersections")
         street_network.parse_intersections()
         print("Finished parsing intersections")
@@ -358,7 +367,11 @@ if __name__ == "__main__":
     sidewalk_networks = []
     print("1")
     for street_network in street_networks:
-        sidewalk_networks.append(main(street_network))
+        try:
+            sidewalk_networks.append(main(street_network))
+        except:
+            log.debug("Uh oh, creating this sidewalk network failed. Skipping...")
+            continue
     sidewalk_network_main = sidewalk_networks[0]
     print("2")
     for sidewalk_network in sidewalk_networks[1:]:
