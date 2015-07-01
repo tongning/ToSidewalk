@@ -280,7 +280,7 @@ def merge_sidewalks(sidewalk_network1, sidewalk_network2):
     Takes two sidewalk networks and merges them without duplicating sidewalk data"""
     for node in sidewalk_network1.nodes.get_list():
         node.confirmed = True
-
+    '''
     # add new nodes from sidewalk_network2 to sidewalk_network1
     for sidewalk_node in sidewalk_network2.nodes.get_list():
         in_other = False
@@ -289,11 +289,20 @@ def merge_sidewalks(sidewalk_network1, sidewalk_network2):
             if sidewalk_node.location() == other_sidewalk_node.location():
                 in_other = True
                 same_node = other_sidewalk_node
-        if not in_other:
+        if not in_other: # If street network 2 contains the node but street network 1 does not
+            sidewalk_network1.add_node(sidewalk_node) # Add node from street network 2 to street network 1
+        else: # If both networks contain the node
+            sidewalk_network2.nodes.update(sidewalk_node.id, same_node)
+    '''
+    # add new nodes from sidewalk_network2 to sidewalk_network1
+    network1_dict = {}
+    for sidewalk_node in sidewalk_network1.nodes.get_list():
+        network1_dict[sidewalk_node.location] = sidewalk_node
+    for sidewalk_node in sidewalk_network2.nodes.get_list():
+        if sidewalk_node.location not in network1_dict:
             sidewalk_network1.add_node(sidewalk_node)
         else:
-            sidewalk_network2.nodes.update(sidewalk_node.id, same_node)
-
+            sidewalk_network2.nodes.update(sidewalk_node.id, network1_dict[sidewalk_node.location])
     # add new ways from sidewalk_network2 to sidewalk_network1
     for way in sidewalk_network2.ways.get_list():
         # ensure all ways have correct nids, if incorrect update to correct nid from network1
@@ -346,6 +355,8 @@ if __name__ == "__main__":
 
     #files=[]
     #files.append(filename)
+    #files.append("../resources/tests/out2340_3133.pbfr")
+    #files.append("../resources/tests/out2340_3134.pbfr")
     street_networks = []
     for filename in files:
         log.debug("Parsing " + filename)
