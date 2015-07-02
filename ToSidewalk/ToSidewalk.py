@@ -4,6 +4,7 @@ import numpy as np
 import os
 import gzip
 import glob
+import shutil
 from latlng import LatLng
 from nodes import Node, Nodes
 from ways import Sidewalk, Sidewalks, Street
@@ -278,8 +279,10 @@ def merge_sidewalks(sidewalk_network1, sidewalk_network2):
     """Returns a merged sidewalk network
 
     Takes two sidewalk networks and merges them without duplicating sidewalk data"""
+    log.debug("Merge 1")
     for node in sidewalk_network1.nodes.get_list():
         node.confirmed = True
+    log.debug("Merge 2")
     '''
     # add new nodes from sidewalk_network2 to sidewalk_network1
     for sidewalk_node in sidewalk_network2.nodes.get_list():
@@ -295,14 +298,17 @@ def merge_sidewalks(sidewalk_network1, sidewalk_network2):
             sidewalk_network2.nodes.update(sidewalk_node.id, same_node)
     '''
     # add new nodes from sidewalk_network2 to sidewalk_network1
+    log.debug("Merge 3")
     network1_dict = {}
     for sidewalk_node in sidewalk_network1.nodes.get_list():
         network1_dict[sidewalk_node.location] = sidewalk_node
+    log.debug("Merge 4")
     for sidewalk_node in sidewalk_network2.nodes.get_list():
         if sidewalk_node.location not in network1_dict:
             sidewalk_network1.add_node(sidewalk_node)
         else:
             sidewalk_network2.nodes.update(sidewalk_node.id, network1_dict[sidewalk_node.location])
+    log.debug("Merge 5")
     # add new ways from sidewalk_network2 to sidewalk_network1
     for way in sidewalk_network2.ways.get_list():
         # ensure all ways have correct nids, if incorrect update to correct nid from network1
@@ -316,6 +322,7 @@ def merge_sidewalks(sidewalk_network1, sidewalk_network2):
                 has_confirmed_parents = True
         if not has_confirmed_parents:
             sidewalk_network1.add_way(way)
+    log.debug("Merge 6")
     return sidewalk_network1
 
 def main(street_network):
@@ -337,7 +344,10 @@ if __name__ == "__main__":
     # filename = "../resources/SegmentedStreet_01.osm"
     #filename = "../resources/ParallelLanes_03.osm"
     #filename = "../resources/SmallMap_04.osm"
-    filename = "../resources/dc-baltimore.osm"
+
+    # Clear the data directory before beginning
+    shutil.rmtree('data/')
+    filename = "../resources/dc-whole.osm"
 
     split_large_osm_file(filename)
 
