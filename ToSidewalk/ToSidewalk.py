@@ -346,6 +346,31 @@ def main(street_network):
     return sidewalk_network
 
 if __name__ == "__main__":
+    # # filename = "../resources/SmallMap_03.osm"
+    # filename = "../resources/SmallMap_01.osm"
+    # # filename = "../resources/ParallelLanes_03.osm"
+    # # filename = "../resources/tests/out2340_3134.pbfr"
+    # street_network = parse(filename)
+    # # street_network.parse_intersections()
+    # street_network.preprocess()
+    # sidewalk_network = main(street_network)
+    #
+    # # street_network.merge_parallel_street_segments2()
+    # with open("../resources/SmallMap_01_Sidewalks.geojson", "wb") as f:
+    #     geojson = sidewalk_network.export(data_type="ways")
+    #     print >>f, geojson
+    #
+    # with open("../resources/SmallMap_01_SidewalkNodes.geojson", "wb") as f:
+    #     geojson = sidewalk_network.export(data_type="nodes")
+    #     print >>f, geojson
+    #
+    # with open("../resources/SmallMap_01_Streets.geojson", "wb") as f:
+    #     geojson = street_network.export(data_type="ways")
+    #     print >>f, geojson
+    #
+    # with open("../resources/SmallMap_01_StreetNodes.geojson", "wb") as f:
+    #     geojson = street_network.export(data_type="nodes")
+
     filename = "../resources/SmallMap_04.osm"
     # singlefile for small files and debugging
     # batch for large osm file
@@ -439,4 +464,3 @@ if __name__ == "__main__":
 
         f = open('output.geojson', 'w')
         print >>f, geojson
-
